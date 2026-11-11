@@ -39,6 +39,8 @@ git clone https://github.com/TTNAN/quark-skill.git
 cp -r quark-skill/skills/quark-search-save ~/.claude/skills/
 ```
 
+> The [Chinese README](README.md) has the full reference: a sample conversation, search script options and JSON fields, how the official skill is located, self-hosting PanSou, privacy, known limitations and FAQ.
+
 ## Configuration
 
 | Variable | Purpose | Default |
