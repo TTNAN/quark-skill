@@ -27,6 +27,7 @@
 
 | 你说 | 它做 |
 | --- | --- |
+| （第一次用时） | 发现没装夸克官方 Skill，问你一句，同意后从夸克官方地址自动装好并引导登录 |
 | 「帮我找一下线性代数的课件，存到夸克」 | 用 PanSou 聚合搜索，只留夸克链接，去重后按日期从新到旧列前 5 条 |
 | 「要第 1 个」 | 调夸克官方 Skill 的 `saveas`，整个分享一键转存 |
 | （自动） | 用官方 `search` 回查，告诉你文件存在了哪个目录 |
@@ -43,55 +44,24 @@
 | --- | --- | --- | --- | --- |
 | 手动搜 + 手动存 | 否 | 否 | 手点 | 费时，容易存错版本 |
 | 抓 cookie 的转存脚本 | **要** | 常常要 | 逆向网页接口 | 账号凭据外泄、接口一改就坏 |
-| **quark-skill** | 否 | 否 | 夸克官方 Skill `saveas` | 授权走官方 `login`，本仓库碰不到你的凭据 |
+| **quark-skill** | 否 | 否（只装一个 Skill） | 夸克官方 Skill `saveas` | 授权走官方 `login`，本仓库碰不到你的凭据 |
 
 **适合**：在 Claude Code、Codex、Cursor 等智能体里工作、经常要存公开课件、开源书、教程资料的人。
 **不适合**：批量囤资源、需要百度网盘 / 阿里云盘等其他网盘的场景（目前只支持夸克）。
 
 ## 快速开始
 
+**你只需要装这一个 Skill。** 转存要用的夸克官方网盘 Skill，第一次用时会自动帮你装好。
+
 **你需要准备**
 
 - 一个支持 Agent Skill 的智能体（Claude Code、Codex、Cursor 等）
-- Python 3.10+（搜索脚本，只用标准库，不用 `pip install`）
-- Node.js 16+（夸克官方 Skill 的 CLI 要用；没有的话官方安装脚本会自动装）
+- Python 3.10+（脚本只用标准库，不用 `pip install`）
 - 一个夸克网盘账号
 
-**1. 装好夸克官方 Skill 并登录**
+Node.js 不用提前装：官方安装脚本会检查，缺了自动装 16+。
 
-本 Skill 的转存一步依赖夸克官方的「夸克网盘 Skill」（目录名 `quarkclouddrive`）。官方介绍和最新下载地址在 [夸克网盘 Skill 官方页面](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT)。
-
-**方式一：让智能体自己装（官方推荐）**
-
-打开官方页面，点「复制技能地址」，然后把下面这段话发给你的智能体（技能地址换成你复制到的最新地址）：
-
-```
-请安装 夸克网盘Skill,并授权账号
-技能地址：https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip
-```
-
-智能体会下载、解压、运行官方安装脚本，再引导你登录授权。上面的地址是写这份 README 时的 1.0.25 版，版本更新后以官方页面为准。
-
-**方式二：手动安装**
-
-```bash
-# 以 Claude Code 为例；Codex 换成 ~/.codex/skills，其他智能体换成它的全局 skills 目录
-mkdir -p ~/.claude/skills/quarkclouddrive && cd ~/.claude/skills/quarkclouddrive
-curl -L -o /tmp/quarkclouddrive.zip "https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip"
-unzip -o /tmp/quarkclouddrive.zip      # 压缩包里直接是 SKILL.md、scripts/、references/
-bash scripts/install.sh                # 检查并安装 Node.js 16+、安装 CLI、自检
-node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
-```
-
-官方要求装在智能体的**全局** skills 目录，不要装进某个项目目录，否则换个项目就找不到了。
-
-**然后登录授权**
-
-在智能体里说一句「登录夸克网盘」，按提示完成官方 Skill 的 `login`（浏览器授权）。授权由官方 Skill 管理，本仓库不经手。
-
-装好后本 Skill 会自动找到它；装在非常规目录时，设置环境变量 `QUARK_SKILL_DIR` 指过去即可。
-
-**2. 安装本 Skill**
+**1. 安装**
 
 ```bash
 npx skills add TTNAN/quark-skill -g -y
@@ -106,15 +76,51 @@ mkdir -p ~/.claude/skills
 cp -r quark-skill/skills/quark-search-save ~/.claude/skills/
 ```
 
-注意要复制**整个** `quark-search-save` 目录（`scripts/` 里有搜索和定位脚本），只拷 `SKILL.md` 用不了。
+注意要复制**整个** `quark-search-save` 目录（`scripts/` 里有搜索、定位和安装脚本），只拷 `SKILL.md` 用不了。
 
 </details>
 
-**3. 在对话里说一句**
+**2. 在对话里说一句**
 
 ```
 帮我找一下《深入理解计算机系统》的课件，存到夸克网盘
 ```
+
+**第一次用时**会多两步，之后就不用了：
+
+1. 智能体发现你还没装夸克官方 Skill，问你要不要装。你说「装」，它就从夸克官方地址下载最新版，装到同一个 skills 目录下，并运行官方安装脚本。
+2. 它弹出夸克的浏览器授权页，你登录确认即可（浏览器打不开时，把页面上的授权码贴给它）。
+
+授权完它会接着搜你刚才要的东西，不用再说一遍。
+
+<details>
+<summary>已经装过官方 Skill，或者想自己装</summary>
+
+已经装好的话什么都不用做，本 Skill 会自动找到它（查找顺序见下文）。
+
+想自己装的话，官方介绍和最新下载地址在 [夸克网盘 Skill 官方页面](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT)，两种方式任选：
+
+**让智能体装（官方推荐）**：在官方页面点「复制技能地址」，把下面这段话发给智能体（地址换成你复制到的最新地址）：
+
+```
+请安装 夸克网盘Skill,并授权账号
+技能地址：https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip
+```
+
+**手动装**：
+
+```bash
+# 以 Claude Code 为例；Codex 换成 ~/.codex/skills，其他智能体换成它的全局 skills 目录
+mkdir -p ~/.claude/skills/quarkclouddrive && cd ~/.claude/skills/quarkclouddrive
+curl -L -o /tmp/quarkclouddrive.zip "https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip"
+unzip -o /tmp/quarkclouddrive.zip      # 压缩包里直接是 SKILL.md、scripts/、references/
+bash scripts/install.sh                # 检查并安装 Node.js 16+、安装 CLI、自检
+node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
+```
+
+上面的地址是写这份 README 时的 1.0.25 版，以官方页面为准。官方要求装在智能体的**全局** skills 目录，不要装进某个项目目录。装好后在智能体里说「登录夸克网盘」完成授权。
+
+</details>
 
 想先看看官方 Skill 本身能做什么，见 [官方 Skill 演示](examples/official-skill-demo.md)。
 
@@ -140,12 +146,17 @@ cp -r quark-skill/skills/quark-search-save ~/.claude/skills/
 智能体：已转存，保存在「/来自：分享/线性代数（带源码课件）」，回查确认文件已在网盘里。
 ```
 
+第一次用时，在列结果之前会先问你要不要装夸克官方 Skill，装好、授权后再继续。
+
 如果第 1 条的分享已经失效，它会先把夸克返回的原始报错告诉你，再问你要不要换第 2 条，你同意了才换。
 
 ## 工作流
 
 ```
 你的一句话
+   │
+   ▼
+⓪ 准备   find_quark_cli.py                    找官方 Skill；没有就问你，同意后 install_quark_skill.py 从官方地址装
    │
    ▼
 ① 搜索   pansou_search.py --kw "关键词"      只留夸克链接，去重排序，冷启动自动重试
@@ -238,6 +249,23 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
 
 找不到时，`--json` 会列出所有查过的路径（`checked` 字段），方便你判断装到哪去了。
 
+### 找不到时怎么自动安装
+
+`install_quark_skill.py` 只是替你执行官方安装步骤，本仓库不附带任何夸克的文件：
+
+1. 请求夸克官方接口 `open-api-drive.quark.cn/agent/v1/skill_config` 拿最新版本和下载地址（只接受 `quark.cn` 的 https 地址；接口不可用时用官方页面公布的地址兜底）
+2. 下载官方 zip，校验里面有 `SKILL.md` 和 `scripts/quark-drive.cjs`，拒绝路径越界的包
+3. 先解压到临时目录，再整体移到本 Skill 的同级目录 `quarkclouddrive`，失败不留半成品；目标目录已有别的东西时不覆盖
+4. 运行官方 `scripts/install.sh`（检查并安装 Node.js 16+、安装 CLI、自检）
+
+```bash
+python3 skills/quark-search-save/scripts/install_quark_skill.py --json                     # 装到同级目录
+python3 skills/quark-search-save/scripts/install_quark_skill.py --dir ~/.codex/skills/quarkclouddrive --json
+python3 skills/quark-search-save/scripts/install_quark_skill.py --no-setup                 # 只下载解压，不跑官方脚本
+```
+
+已经装好时它什么都不做，直接返回 `already_installed`。智能体只会在你同意后运行它。
+
 ### 自部署 PanSou
 
 公共实例 `s.panhunt.com` 是别人维护的，收录范围和稳定性都不受本项目控制。需要更稳定的搜索时，可以按 [fish2018/pansou](https://github.com/fish2018/pansou) 的说明用 Docker 自己起一个实例，再设置：
@@ -253,6 +281,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 
 - **不乱改词**：只用你说的关键词搜，搜不到就直说，不编链接。
 - **不替你做主**：没有你明确选中的那一条，就不转存。
+- **装东西先问你**：官方 Skill 没装时，先问你，同意了才从夸克官方地址安装。
 - **不乱放文件**：你没指定目录时用夸克默认位置；指定了才传目录参数。
 - **失败就停**：`saveas` 报错时原样告诉你 `msg`，不静默重试、不绕路。
 - **链接失效会问你**：分享已失效时，把下一条候选推荐给你，你同意了才换，不会自动连试。
@@ -262,6 +291,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 
 - **发给 PanSou 的**：只有搜索关键词。
 - **发给夸克的**：由官方 Skill 的 CLI 发出，内容是分享链接、提取码，以及官方 CLI 要求的会话参数（你的原始提问、会话 ID）。这部分行为由夸克官方 Skill 决定。
+- **安装官方 Skill 时**（只在第一次、你同意后）：访问夸克官方的 `open-api-drive.quark.cn` 和 `pdds.quark.cn` 下载安装包；官方安装脚本缺 Node.js 时会从 NodeSource 安装。
 - **本仓库不读、不存**任何 cookie、token 或账号信息，也不把数据发到第三方服务器。
 
 ## 已知限制
@@ -278,9 +308,9 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 ## 常见问题
 
 <details>
-<summary>提示找不到夸克官方 Skill 的 CLI？</summary>
+<summary>提示找不到夸克官方 Skill？</summary>
 
-确认官方 Skill 已安装，并先跑一次它自带的 `bash <官方 Skill 目录>/scripts/install.sh` 自检。目录以实际安装位置为准，例如 `~/.claude/skills/quarkclouddrive`。
+正常情况下智能体会直接问你要不要自动安装。如果你已经装在别的位置，设置环境变量 `QUARK_SKILL_DIR` 指过去；如果自动安装失败（比如网络连不上夸克），按「已经装过官方 Skill，或者想自己装」里的方式手动装，再跑一次官方的 `bash <官方 Skill 目录>/scripts/install.sh` 自检。
 
 </details>
 
@@ -295,6 +325,13 @@ PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。�
 <summary>链接带提取码怎么办？</summary>
 
 链接里已有 `?pwd=xxxx` 时直接转存；提取码单独给出时，Skill 会自动带上 `--passcode`。
+
+</details>
+
+<details>
+<summary>为什么不直接把官方 Skill 打包进这个仓库？</summary>
+
+官方 Skill 是夸克的代码，没有授权再分发；打包进来还会很快过时。所以改成第一次用时、你同意后，从夸克官方地址下载最新版。效果一样是「只装一个」，但装上的永远是官方原版。
 
 </details>
 
@@ -327,7 +364,8 @@ quark-skill/
 │   ├── SKILL.md                 智能体读的说明书（触发词、工作流、失败处理）
 │   └── scripts/
 │       ├── pansou_search.py     PanSou 搜索、过滤、去重、排序、冷启动重试
-│       └── find_quark_cli.py    定位夸克官方 Skill 的 CLI
+│       ├── find_quark_cli.py    定位夸克官方 Skill 的 CLI
+│       └── install_quark_skill.py  没装时从夸克官方地址安装官方 Skill
 ├── tests/                       离线单元测试（不联网）
 ├── examples/                    官方 Skill 能力演示
 ├── tools/make_demo_gif.py       生成 README 演示动图

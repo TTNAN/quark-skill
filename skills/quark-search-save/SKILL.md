@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，再调夸克官方 Skill 的 saveas 全自动转存，全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.1.2"
+  version: "1.2.0"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -16,15 +16,25 @@ metadata:
 
 ## 前置条件（缺一不可，缺了先停下来告诉用户）
 
-1. **夸克官方 Skill（`quarkclouddrive`）已安装并已登录授权。**
-   用下面的命令定位它的 CLI，不要凭经验猜路径：
+1. **夸克官方 Skill（`quarkclouddrive`）已安装并已登录授权。** 没装的话由你帮用户装，不要让他自己去折腾。
+   先定位它的 CLI，不要凭经验猜路径：
 
    ```bash
    python3 <本 Skill 目录>/scripts/find_quark_cli.py --json
    ```
 
    - `ok: true`：记下 `cli`（即 `<quark-cli>`）和 `skill_dir`（即 `<quark-skill-dir>`），本次对话复用。
-   - `ok: false`：告诉用户没找到官方 Skill，把 `checked` 里查过的位置给他看，请他先安装；或让他设置环境变量 `QUARK_SKILL_DIR` 指向安装目录。然后停下。
+   - `ok: false`：告诉用户“转存要用夸克官方的网盘 Skill，你还没装”，**问他要不要现在从夸克官方地址帮他装**。他同意后运行：
+
+     ```bash
+     python3 <本 Skill 目录>/scripts/install_quark_skill.py --json
+     ```
+
+     脚本会向夸克官方接口查最新版下载地址（只接受 `quark.cn` 的地址），下载官方 zip，解压到本 Skill 的同级目录 `quarkclouddrive`，再运行官方的 `scripts/install.sh`（检查并安装 Node.js 16+、安装 CLI、自检）。本仓库不附带任何夸克的文件。
+     - `ok: true`：用返回的 `cli`、`skill_dir` 作为 `<quark-cli>`、`<quark-skill-dir>`。然后**先读一遍 `<quark-skill-dir>/SKILL.md` 和 `<quark-skill-dir>/references/auth.md`**（官方 Skill 是刚装的，你还没加载它的规则），按官方规则输出首次安装的欢迎语，并用 `node <quark-cli> login` 引导用户登录授权（浏览器打不开时按官方流程让用户把授权码贴进对话，再 `login --token`）。登录成功后接着做用户原来的请求，不要让他再说一遍。
+     - `ok: false`：把 `error` 原文告诉用户，附上 `official_page` 让他按官方页面手动安装，然后停下。
+     - 用户想装到别的位置（例如 Codex 的 `~/.codex/skills`）时，加 `--dir <目录>/quarkclouddrive`。官方要求装在智能体的**全局** skills 目录，不要装进项目目录。
+     - 用户不同意安装：停下，告诉他转存这一步需要官方 Skill；也可以设置环境变量 `QUARK_SKILL_DIR` 指向已有的安装目录。
 2. **搜索用 PanSou。** 默认公共实例 `https://s.panhunt.com`，不用 key；只有用户自部署时才用 `PANSOU_URL` / `PANSOU_TOKEN`。
 
 ## 工作流（4 步，缺一步都不算完成）
@@ -93,5 +103,6 @@ node <quark-cli> saveas --url "<分享链接>" --session-input "<用户原始提
 ## 明确不做的事
 
 - 不抓浏览器 cookie、不逆向夸克网页接口、不绕过官方 Skill 的环境检测。
+- 不附带、不修改夸克官方 Skill 的任何文件；只在用户同意后，从夸克官方地址下载安装官方 Skill。
 - 不部署应用、不跑 Docker、不开常驻服务。本 Skill 只是两段现成能力的拼接：PanSou 搜索 + 夸克官方转存。
 - 不提供、不托管任何资源。请只转存用户有权保存的内容。

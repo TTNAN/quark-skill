@@ -26,28 +26,21 @@ No cookie scraping, no reverse engineering, no servers to deploy.
 
 ## Install
 
-Prerequisite: install the official Quark Drive skill (`quarkclouddrive`) and complete its `login` once. Get the latest download link from the [official page](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT) and either tell your agent:
-
-```
-请安装 夸克网盘Skill,并授权账号
-技能地址：<the zip link copied from the official page>
-```
-
-or install it by hand into your agent's **global** skills directory:
-
-```bash
-mkdir -p ~/.claude/skills/quarkclouddrive && cd ~/.claude/skills/quarkclouddrive
-curl -L -o /tmp/quarkclouddrive.zip "https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip"
-unzip -o /tmp/quarkclouddrive.zip && bash scripts/install.sh   # needs/installs Node.js 16+
-```
-
-Then install this skill:
+You only install this one skill:
 
 ```bash
 npx skills add TTNAN/quark-skill -g -y
 ```
 
-Manual install (Claude Code example) — copy the **whole** skill folder, not just `SKILL.md`:
+The transfer step uses the official Quark Drive skill (`quarkclouddrive`). If it is missing, the first time you use this skill the agent asks you, then downloads the latest official package from Quark's own servers, installs it next to this skill, runs the official `install.sh` (installs Node.js 16+ if needed), and walks you through the browser login. This repo ships none of Quark's files.
+
+To install the official skill yourself, get the latest link from the [official page](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT) and either tell your agent `请安装 夸克网盘Skill,并授权账号` with the link, or run:
+
+```bash
+python3 ~/.claude/skills/quark-search-save/scripts/install_quark_skill.py --json
+```
+
+Manual install of this skill (Claude Code example) — copy the **whole** skill folder, not just `SKILL.md`:
 
 ```bash
 git clone https://github.com/TTNAN/quark-skill.git
