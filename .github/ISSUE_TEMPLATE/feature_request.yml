@@ -1,0 +1,22 @@
+name: ✨ 功能建议
+description: 想让它多做点什么
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 用一个真实场景描述，比如“我想一次存一整套课程”
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你希望它怎么做
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 确认
+      options:
+        - label: 这个需求不需要抓 cookie、逆向夸克接口或部署服务（本项目不做这些）
+          required: true

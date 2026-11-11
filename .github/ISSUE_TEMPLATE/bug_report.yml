@@ -1,0 +1,61 @@
+name: 🐞 Bug 报告
+description: 搜不到、转存失败、装不上……都可以报
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢反馈！填得越全，越快能定位。**请不要贴夸克账号、token 或任何私人分享链接的提取码。**
+  - type: input
+    id: agent
+    attributes:
+      label: 智能体
+      description: 在哪个智能体里用的，带版本更好
+      placeholder: Claude Code 2.x / Codex / Cursor / OpenClaw …
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: 版本
+      description: 本 Skill 版本（SKILL.md 里的 metadata.version）和夸克官方 Skill 版本
+      placeholder: quark-search-save 1.1.2 / quarkclouddrive 1.0.25
+    validations:
+      required: true
+  - type: dropdown
+    id: step
+    attributes:
+      label: 卡在哪一步
+      options:
+        - 安装（npx skills add / 手动安装）
+        - 第 1 步：搜索
+        - 第 2 步：挑选
+        - 第 3 步：转存（saveas）
+        - 第 4 步：回查
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么
+      description: 你对智能体说了什么，它做了什么，你期望它做什么
+    validations:
+      required: true
+  - type: textarea
+    id: search_output
+    attributes:
+      label: 搜索脚本输出（搜索相关问题必填）
+      description: 运行 `python3 <Skill 目录>/scripts/pansou_search.py --kw "你的关键词" --json` 的输出
+      render: json
+  - type: textarea
+    id: cli_output
+    attributes:
+      label: 官方 CLI 返回（转存相关问题必填）
+      description: saveas 返回的 code 和 msg，去掉账号信息
+      render: json
+  - type: input
+    id: os
+    attributes:
+      label: 系统 / Python 版本
+      placeholder: macOS 15 / Python 3.12

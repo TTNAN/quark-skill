@@ -110,6 +110,7 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
 - **不替你做主**：没有你明确选中的那一条，就不转存。
 - **不乱放文件**：你没指定目录时用夸克默认位置；指定了才传目录参数。
 - **失败就停**：`saveas` 报错时原样告诉你 `msg`，不静默重试、不绕路。
+- **链接失效会问你**：分享已失效时，把下一条候选推荐给你，你同意了才换，不会自动连试。
 - **授权问题走官方**：遇到未授权，引导你重新走官方 Skill 的 `login`。
 
 ## 支持哪些智能体
@@ -142,12 +143,12 @@ PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。�
 ## 开发
 
 ```bash
-pip install pytest
+pip install pytest pyyaml
 python -m pytest -q                 # 单元测试，不联网
 python tools/make_demo_gif.py       # 重新生成演示动图（需要 Pillow 和中文字体）
 ```
 
-改动记录见 [CHANGELOG](CHANGELOG.md)。
+改动记录见 [CHANGELOG](CHANGELOG.md)，参与贡献见 [CONTRIBUTING](CONTRIBUTING.md)。
 
 ## 合规声明
 

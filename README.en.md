@@ -59,12 +59,15 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py
 - Never saves without your explicit pick.
 - Uses Quark's default folder unless you name one.
 - Stops and shows the raw error message when a transfer fails.
+- If a share link is dead, suggests the next candidate and waits for your OK — never tries several on its own.
 
 ## Development
 
 ```bash
-pip install pytest && python -m pytest -q
+pip install pytest pyyaml && python -m pytest -q
 ```
+
+See [CONTRIBUTING](CONTRIBUTING.md) (Chinese) for project rules and release steps.
 
 ## Legal
 

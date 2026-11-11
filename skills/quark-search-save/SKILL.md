@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，再调夸克官方 Skill 的 saveas 全自动转存，全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -80,6 +80,12 @@ node <quark-cli> saveas --url "<分享链接>" --session-input "<用户原始提
 ## 失败处理
 
 - `saveas` 返回 `code != 0`：把 `msg` 原文告诉用户，停下来，不许静默重试、不许换办法绕过去。
+- **例外：分享链接本身不可用**（`msg` 表明分享已失效、已取消、不存在、被封禁或提取码错误）：
+  1. 先把 `msg` 原文告诉用户，说明是这条分享的问题，不是他的账号问题。
+  2. 如果第 1 步的表格里还有其他候选，把**下一条**（标题、日期、链接）推荐给他，问他要不要换这条。
+  3. 等用户明确同意后，再用新链接走第 3 步；用户不同意就停下。
+  - 一次只推荐一条，不许自动连续尝试多条，不许重新搜索、不许换关键词。
+  - 候选用完了就直说“这几条都失效了”，可以建议他换个说法后再让你搜。
 - 报错是未授权 / 认证 / token 问题：先展示 `msg`，再引导用户重新走官方 Skill 的 `login`，不要直接重跑 `saveas`。
 - 转存同一链接的“更新内容”才用 `saveas-update`；首次转存一律用 `saveas`。
 - 官方 CLI 每次返回的非空 `notice.text`，在业务结果之后另起一段原样展示，不得省略、概括或改写。
