@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6D5BFF" alt="MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.10%2B-3F7BFF" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/python-3.8%2B-3F7BFF" alt="Python 3.8+">
   <img src="https://img.shields.io/badge/依赖-仅标准库-1FC8F2" alt="no deps">
   <img src="https://img.shields.io/badge/Agent%20Skill-quark--search--save-334155" alt="skill">
   <a href="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml"><img src="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -28,9 +28,12 @@
 | 你说 | 它做 |
 | --- | --- |
 | （第一次用时） | 发现没装夸克官方 Skill，问你一句，同意后从夸克官方地址自动装好并引导登录 |
-| 「帮我找一下线性代数的课件，存到夸克」 | 用 PanSou 聚合搜索，只留夸克链接，去重后按日期从新到旧列前 5 条 |
-| 「要第 1 个」 | 调夸克官方 Skill 的 `saveas`，整个分享一键转存 |
+| 「帮我找一下线性代数的课件，存到夸克」 | 用 PanSou 聚合搜索（主实例没结果自动换备用），只留夸克链接，去重排序 |
+| （自动） | 用官方 `share-detail` 逐条验链接，**失效的直接剔掉**，列出能存的前 5 条，附文件数和内容预览 |
+| 「要第 1 个，只要 PDF」 | 用官方 `share-search` 在分享里找出 PDF，你挑好后只转存这几个文件 |
+| 「要第 2 个」 | 调官方 `saveas`，整个分享一键转存 |
 | （自动） | 用官方 `search` 回查，告诉你文件存在了哪个目录 |
+| 「这个分享有更新吗？」 | 用官方 `get-share-update-files` 查新增内容，你同意后 `saveas-update` 只补新增的 |
 
 全程不抓 cookie、不逆向接口、不部署服务，只是把两段现成能力接起来：**PanSou 搜索 + 夸克官方转存**。
 
@@ -56,7 +59,7 @@
 **你需要准备**
 
 - 一个支持 Agent Skill 的智能体（Claude Code、Codex、Cursor 等）
-- Python 3.10+（脚本只用标准库，不用 `pip install`）
+- Python 3.8+（脚本只用标准库，不用 `pip install`）
 - 一个夸克网盘账号
 
 Node.js 不用提前装：官方安装脚本会检查，缺了自动装 16+。
@@ -131,24 +134,36 @@ node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
 ```
 你：帮我找一下线性代数的课件，存到夸克
 
-智能体：搜到 95 条夸克链接，按日期从新到旧列前 5 条：
+智能体：搜到 95 条夸克链接，逐条验过，另有 3 条已失效已略过。能存的前 5 条：
 
-  | # | 标题                                   | 日期       | 提取码 |
-  |---|----------------------------------------|------------|--------|
-  | 1 | 线性代数（带源码课件）                 | 2026-11-11 | 无     |
-  | 2 | 机器学习的数学基础（含线性代数）       | 2026-11-11 | 无     |
-  | 3 | ……                                     | ……         | ……     |
+  | # | 标题                             | 日期       | 文件数 | 内容预览                     |
+  |---|----------------------------------|------------|--------|------------------------------|
+  | 1 | 线性代数（带源码课件）           | 2026-11-11 | 24     | 第1章.pdf、第2章.pdf、习题   |
+  | 2 | 机器学习的数学基础（含线性代数） | 2026-11-11 | 53     | 01 导论.mp4、02 矩阵.mp4     |
+  | 3 | ……                               | ……         | ……     | ……                           |
 
   要存哪一条？
 
-你：第 1 个
+你：第 1 个，只要第 3 章
+
+智能体：分享里和「第3章」相关的有 2 个文件：
+
+  | 文件名            | 大小   | 类型 |
+  |-------------------|--------|------|
+  | 第3章 行列式.pdf  | 2.1 MB | 文档 |
+  | 第3章 习题.pdf    | 0.8 MB | 文档 |
+
+  两个都存吗？
+
+你：都存
 
 智能体：已转存，保存在「/来自：分享/线性代数（带源码课件）」，回查确认文件已在网盘里。
+        这个分享以后有更新的话，跟我说「看看有没有更新」就能只补新增的。
 ```
 
 第一次用时，在列结果之前会先问你要不要装夸克官方 Skill，装好、授权后再继续。
 
-如果第 1 条的分享已经失效，它会先把夸克返回的原始报错告诉你，再问你要不要换第 2 条，你同意了才换。
+预检之后链接仍可能在转存那一刻失效。这时它会先把夸克返回的原始报错告诉你，再问你要不要换下一条，你同意了才换。
 
 ## 工作流
 
@@ -156,35 +171,47 @@ node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
 你的一句话
    │
    ▼
-⓪ 准备   find_quark_cli.py                    找官方 Skill；没有就问你，同意后 install_quark_skill.py 从官方地址装
+⓪ 准备   find_quark_cli.py                   找官方 Skill；没有就问你，同意后 install_quark_skill.py 从官方地址装
    │
    ▼
-① 搜索   pansou_search.py --kw "关键词"      只留夸克链接，去重排序，冷启动自动重试
+① 搜索   pansou_search.py --kw "关键词"      只留夸克链接，去重排序；冷启动自动重试，没结果换备用实例
    │
    ▼
-② 挑选   前 5 条列成表格，等你点头           没选中不转存
+② 预检   check_links.py → share-detail       失效的剔掉，补上文件数和内容预览
    │
    ▼
-③ 转存   quark-drive.cjs saveas --url ...    夸克官方接口
+③ 挑选   前 5 条列成表格，等你点头           没选中不转存
    │
    ▼
-④ 回查   quark-drive.cjs search              告诉你保存目录
+④ 选文件（可选）share-search / share-detail  只要一部分时，挑出要的文件
+   │
+   ▼
+⑤ 转存   saveas [--fid-list ...]             夸克官方接口
+   │
+   ▼
+⑥ 回查   search                              告诉你保存目录
+
+之后：get-share-update-files → saveas-update  分享有更新时只补新增的
 ```
 
 每一步具体做了什么：
 
-1. **搜索**：从你的话里取出资源名本身（去掉书名号、「帮我找」、版本号、年份），调 PanSou 的 `cloud_types=quark&res=merge` 接口。结果只留 `pan.quark.cn` 链接，按链接去重（重复时保留较新的、补齐提取码），按日期从新到旧排序。空结果时用**同一个关键词**按 5、10、15 秒退避重试，不换词。
-2. **挑选**：最多列 5 条。你提过的版本、年份等条件只用来帮你标出最匹配的一条，最终还是你说了算。
-3. **转存**：调官方 CLI 的 `saveas`。带提取码的链接自动加 `--passcode`；你没指定目录就不传目录参数，用夸克默认位置。
-4. **回查**：用官方 `search` 按文件名查一遍，用返回的 `save_path` 原文告诉你存在哪。
+1. **搜索**：从你的话里取出资源名本身（去掉书名号、「帮我找」、版本号、年份），调 PanSou 的 `cloud_types=quark&res=merge` 接口。结果只留 `pan.quark.cn` 链接，按链接去重（重复时保留较新的、补齐提取码），按日期从新到旧排序。空结果时用**同一个关键词**按 5、10、15 秒退避重试；主实例还是没结果或出错，就换备用实例再试一次。
+2. **预检**：对前 10 条候选逐个调官方 `share-detail`（客态模式，不需要登录），把已失效、已取消、不存在、提取码错误的剔掉，留下最多 5 条，并带上分享标题、文件数和前几个文件名。官方 CLI 当前不可用时跳过这一步，流程照旧。
+3. **挑选**：表格里有文件数和内容预览，你不用点开链接也知道里面是什么。你提过的版本、年份等条件只用来帮你标出最匹配的一条，最终还是你说了算。
+4. **选文件**（只在你提出时）：「只要第 3 章」「只要 PDF」时用 `share-search` 在分享里搜；想先看看时用 `share-detail` 浏览目录。挑好的文件记下 `fid`。
+5. **转存**：调官方 `saveas`，整个分享或只传 `--fid-list`。带提取码的链接自动加 `--passcode`；你没指定目录就不传目录参数，用夸克默认位置。
+6. **回查**：用官方 `search` 按文件名查一遍，用返回的 `save_path` 原文告诉你存在哪。
+
+**追更**：连载课程、每周更新的资料，存过一次之后说「看看有没有更新」，它用 `get-share-update-files` 列出新增文件，你同意后用 `saveas-update` 只补新增的，存进上次的目录。智能体支持定时任务的话，还可以让它每天固定时间帮你查。
 
 ## 配置
 
-搜索默认用 PanSou 公共实例 `https://s.panhunt.com`，不需要 key。自部署实例时用环境变量覆盖：
+搜索默认依次用两个 PanSou 公共实例：`https://s.panhunt.com`，没结果或出错时换 `https://so.252035.xyz`（PanSou 作者的演示站），都不需要 key。自部署实例时用环境变量覆盖：
 
 | 环境变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `PANSOU_URL` | PanSou 实例地址 | `https://s.panhunt.com` |
+| `PANSOU_URL` | PanSou 实例地址，逗号分隔可写多个，按顺序尝试 | `https://s.panhunt.com,https://so.252035.xyz` |
 | `PANSOU_TOKEN` | 实例开启认证时的 JWT | 空 |
 | `QUARK_SKILL_DIR` | 夸克官方 Skill 的安装目录（找不到时才需要） | 自动查找 |
 
@@ -196,6 +223,8 @@ python3 skills/quark-search-save/scripts/pansou_search.py --kw "线性代数" --
 python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 CLI 在哪
 ```
 
+预检脚本要在智能体里跑（官方 CLI 会检测运行环境），用法见下文「预检脚本」。
+
 ### 搜索脚本参数
 
 | 参数 | 说明 | 默认值 |
@@ -204,7 +233,7 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
 | `--limit` | 最多输出几条 | `5` |
 | `--retries` | 结果为空时用同一关键词重试几次，`0` 表示不重试 | `3`（约 30 秒） |
 | `--timeout` | 单次请求超时秒数 | `30` |
-| `--url` / `--token` | 覆盖 `PANSOU_URL` / `PANSOU_TOKEN` | 见上表 |
+| `--url` / `--token` | 覆盖 `PANSOU_URL` / `PANSOU_TOKEN`；`--url` 也可以逗号分隔写多个 | 见上表 |
 | `--json` | 以 JSON 输出，给智能体读 | 关 |
 
 `--json` 的输出长这样：
@@ -215,6 +244,8 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
   "keyword": "线性代数",
   "quark_total": 95,
   "attempts": 1,
+  "instance": "https://s.panhunt.com",
+  "instance_errors": [],
   "quark_links": [
     {
       "title": "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）",
@@ -231,12 +262,35 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
 | 字段 | 含义 |
 | --- | --- |
 | `quark_total` | 去重后的夸克链接总数（`quark_links` 只是其中前 `--limit` 条） |
-| `attempts` | 实际请求了几次（冷启动重试时大于 1） |
+| `attempts` | 所有实例加起来实际请求了几次（冷启动重试时大于 1） |
+| `instance` | 结果来自哪个 PanSou 实例 |
+| `instance_errors` | 请求失败的实例和原因（换到备用实例时才会有） |
 | `password` | 搜索源给出的提取码，没有则为空 |
 | `needs_passcode` | 有提取码且链接里没带 `?pwd=` 时为 `true`，转存要加 `--passcode` |
 | `source` | 结果来自 PanSou 的哪个频道或插件 |
 
-出错时输出 `{"ok": false, "error": "..."}`，比如实例被限流返回了网页而不是 JSON。
+所有实例都请求失败时输出 `{"ok": false, "error": "..."}`，比如实例被限流返回了网页而不是 JSON。
+
+### 预检脚本
+
+`check_links.py` 读搜索结果，对每条链接调官方 `share-detail`，剔掉失效的：
+
+```bash
+python3 skills/quark-search-save/scripts/pansou_search.py --kw "线性代数" --limit 10 --json > /tmp/qs.json
+python3 skills/quark-search-save/scripts/check_links.py --cli <官方 CLI 路径> \
+    --session-input "<你的原话>" --session-id "<会话 ID>" --input /tmp/qs.json --keep 5
+```
+
+| 输出字段 | 含义 |
+| --- | --- |
+| `shown` | 要给你看的候选（最多 `--keep` 条，顺序不变），每条多一个 `check` |
+| `check.status` | `valid` 验过能用；`unknown` 没验出来（原因在 `check.msg`），照样可选 |
+| `check.file_num` / `preview` / `listed_size` | 分享里的文件数、前 3 个文件名、首页文件的总大小 |
+| `invalid` | 被剔掉的条目和夸克返回的原因 |
+| `check_skipped` | 官方 CLI 当前不可用时为 `true`，原样返回候选，流程照旧 |
+| `notices` | 官方 CLI 返回的提示，需要原样展示 |
+
+它只调用官方 CLI，不直接请求任何夸克接口；默认 3 个并发。
 
 ### 官方 Skill 是怎么被找到的
 
@@ -289,16 +343,18 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 
 ## 数据与隐私
 
-- **发给 PanSou 的**：只有搜索关键词。
-- **发给夸克的**：由官方 Skill 的 CLI 发出，内容是分享链接、提取码，以及官方 CLI 要求的会话参数（你的原始提问、会话 ID）。这部分行为由夸克官方 Skill 决定。
+- **发给 PanSou 的**：只有搜索关键词（主实例没结果时，备用实例也会收到同一个关键词）。
+- **发给夸克的**：由官方 Skill 的 CLI 发出，内容是分享链接、提取码（预检、选文件、转存、查更新时），以及官方 CLI 要求的会话参数（你的原始提问、会话 ID）。这部分行为由夸克官方 Skill 决定。
 - **安装官方 Skill 时**（只在第一次、你同意后）：访问夸克官方的 `open-api-drive.quark.cn` 和 `pdds.quark.cn` 下载安装包；官方安装脚本缺 Node.js 时会从 NodeSource 安装。
 - **本仓库不读、不存**任何 cookie、token 或账号信息，也不把数据发到第三方服务器。
 
 ## 已知限制
 
 - 只支持夸克网盘链接；百度、阿里等网盘的结果会被过滤掉。
-- 搜得到什么取决于 PanSou 实例的收录。公共实例对部分冷门词（例如一些课程名）可能一直返回空，这时换个说法或自部署实例更有效。
-- 一次只转存一条分享，不做批量转存。
+- 搜得到什么取决于 PanSou 实例的收录。两个公共实例对部分冷门词（例如一些课程名）都可能返回空，这时换个说法或自部署实例更有效。
+- 一次只转存一条分享（可以只存其中几个文件），不做多条分享的批量转存。
+- 预检只能看出「这条分享现在能不能打开」，转存那一刻仍可能因为对方取消分享而失败。
+- 追更依赖官方的转存记录，只对你用 `saveas` 存过的分享有效。
 - 只能转存到你自己的夸克网盘，转存后的文件管理（重命名、移动）请用夸克官方 Skill 或客户端。
 
 ## 支持哪些智能体
@@ -317,7 +373,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 <details>
 <summary>明明有资源却说搜不到？</summary>
 
-PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。搜索脚本已经会用同一关键词自动重试 3 次（共约 30 秒）。仍然没有时，多半是关键词太长：只说书名、课程名本身，别带版本号、年份、出版社。
+PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。搜索脚本已经会用同一关键词自动重试 3 次（共约 30 秒），还没有就换备用实例再试。仍然没有时，多半是关键词太长：只说书名、课程名本身，别带版本号、年份、出版社。
 
 </details>
 
@@ -352,7 +408,21 @@ PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。�
 <details>
 <summary>能一次存好几条吗？</summary>
 
-目前不行，一次只转存你选中的那一条。这是刻意的：每次转存都要你点头，避免存进一堆用不上的东西。
+一次只转存你选中的那一条分享，这是刻意的：每次转存都要你点头，避免存进一堆用不上的东西。反过来，一条分享里可以只存你要的那几个文件。
+
+</details>
+
+<details>
+<summary>为什么表格里有的条目文件数写着「未验证」？</summary>
+
+那条链接预检时夸克没给出明确结果（比如网络抖动），既不能确定能用，也不能确定失效，所以留着让你决定。明确失效的已经剔掉了。
+
+</details>
+
+<details>
+<summary>怎么让它定时帮我追更？</summary>
+
+先正常转存一次。之后在支持定时任务的智能体里说「每天晚上 10 点帮我看看这个分享有没有更新，有就存下来」。智能体不支持定时任务的话，就需要你想起来时说一句「看看有没有更新」。
 
 </details>
 
@@ -363,8 +433,9 @@ quark-skill/
 ├── skills/quark-search-save/
 │   ├── SKILL.md                 智能体读的说明书（触发词、工作流、失败处理）
 │   └── scripts/
-│       ├── pansou_search.py     PanSou 搜索、过滤、去重、排序、冷启动重试
+│       ├── pansou_search.py     PanSou 搜索、过滤、去重、排序、冷启动重试、备用实例
 │       ├── find_quark_cli.py    定位夸克官方 Skill 的 CLI
+│       ├── check_links.py       调官方 share-detail 预检候选，剔除失效链接
 │       └── install_quark_skill.py  没装时从夸克官方地址安装官方 Skill
 ├── tests/                       离线单元测试（不联网）
 ├── examples/                    官方 Skill 能力演示

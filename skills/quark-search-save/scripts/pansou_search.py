@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PanSou 网盘搜索客户端（只用 Python 标准库，Python 3.10+）。
+"""PanSou 网盘搜索客户端（只用 Python 标准库，Python 3.8+）。
 
 查询 PanSou 聚合搜索 API，返回去重、按日期倒序排好的夸克网盘（quark）分享链接。
 
@@ -9,8 +9,9 @@
                              [--retries 3] [--timeout 30]
 
 说明：
-- 默认使用 PanSou 公共实例 https://s.panhunt.com ，不带 key 就能用。
-- 自部署实例用 --url（或环境变量 PANSOU_URL）；实例开了认证
+- 默认依次使用两个 PanSou 公共实例 https://s.panhunt.com 和 https://so.252035.xyz ，
+  不带 key 就能用：前一个出错或没结果时，自动换下一个。
+- 自部署实例用 --url（或环境变量 PANSOU_URL），可以用逗号写多个，按顺序尝试；实例开了认证
   （AUTH_ENABLED=true）再用 --token（或 PANSOU_TOKEN）传 JWT。
 - PanSou 对新关键词是异步聚合的，第一次请求常常返回 0 条。
   脚本会用【同一个关键词】自动退避重试（默认最多再试 3 次，共约 30 秒），不会改词。
@@ -29,9 +30,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 DEFAULT_URL = "https://s.panhunt.com"
+# 默认实例列表：第一个没结果或出错时依次尝试后面的
+DEFAULT_URLS = (DEFAULT_URL, "https://so.252035.xyz")
+FALLBACK_RETRIES = 1  # 备用实例只重试 1 次，避免总耗时过长
 RETRY_DELAYS = (5, 10, 15)  # 第 n 次重试前等待的秒数（PanSou 冷启动实测需 10–30 秒）
 _DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
@@ -152,6 +156,50 @@ def search(keyword, base_url=DEFAULT_URL, token=None, retries=3, timeout=30,
     return items, attempts
 
 
+def parse_urls(value):
+    """把逗号或空白分隔的实例地址拆成列表，去掉空项和重复项。"""
+    if isinstance(value, (list, tuple)):
+        parts = list(value)
+    else:
+        parts = re.split(r"[,\s]+", value or "")
+    out = []
+    for u in parts:
+        u = (u or "").strip().rstrip("/")
+        if u and u not in out:
+            out.append(u)
+    return out
+
+
+def search_many(keyword, urls=DEFAULT_URLS, token=None, retries=3, timeout=30,
+                sleep=time.sleep, log=None):
+    """按顺序在多个 PanSou 实例上搜索，拿到结果就停。
+
+    第一个实例用完整的 retries；后面的备用实例最多重试 FALLBACK_RETRIES 次。
+    返回 (items, attempts, instance, errors)：instance 是给出结果（或最后成功响应）的实例。
+    所有实例都请求失败时抛 SearchError。
+    """
+    urls = parse_urls(urls) or list(DEFAULT_URLS)
+    attempts = 0
+    errors = []
+    answered = None
+    for i, url in enumerate(urls):
+        n = retries if i == 0 else min(retries, FALLBACK_RETRIES)
+        if i and log:
+            log("{} 没有结果，换备用实例 {} 再试…".format(urls[i - 1], url))
+        try:
+            items, used = search(keyword, url, token, n, timeout, sleep=sleep, log=log)
+        except SearchError as e:
+            errors.append("{}: {}".format(url, e))
+            continue
+        attempts += used
+        answered = url
+        if items:
+            return items, attempts, url, errors
+    if answered is None:
+        raise SearchError("；".join(errors) if errors else "PanSou 搜索失败")
+    return [], attempts, answered, errors
+
+
 def format_text(items, total, attempts):
     if not items:
         return "没有搜到夸克网盘链接（同一关键词共请求 {} 次）。\n".format(attempts)
@@ -171,8 +219,9 @@ def format_text(items, total, attempts):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="PanSou 夸克网盘搜索")
     parser.add_argument("--kw", required=True, help="搜索关键词（片名/书名/课程名本身）")
-    parser.add_argument("--url", default=os.environ.get("PANSOU_URL", DEFAULT_URL),
-                        help="PanSou 实例地址（默认 {}）".format(DEFAULT_URL))
+    parser.add_argument("--url", default=os.environ.get("PANSOU_URL", ",".join(DEFAULT_URLS)),
+                        help="PanSou 实例地址，逗号分隔可写多个，按顺序尝试（默认 {}）".format(
+                            ",".join(DEFAULT_URLS)))
     parser.add_argument("--token", default=os.environ.get("PANSOU_TOKEN", ""),
                         help="自部署实例开启认证时的 JWT（默认不填）")
     parser.add_argument("--limit", type=int, default=5, help="最多输出几条（默认 5）")
@@ -195,8 +244,8 @@ def main(argv=None):
         print(msg, file=sys.stderr)
 
     try:
-        items, attempts = search(kw, args.url, args.token or None, args.retries,
-                                 args.timeout, log=log)
+        items, attempts, instance, errors = search_many(
+            kw, args.url, args.token or None, args.retries, args.timeout, log=log)
     except SearchError as e:
         if args.json:
             print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
@@ -207,7 +256,8 @@ def main(argv=None):
     shown = items[: args.limit]
     if args.json:
         print(json.dumps({"ok": True, "keyword": kw, "quark_total": len(items),
-                          "attempts": attempts, "quark_links": shown},
+                          "attempts": attempts, "instance": instance,
+                          "instance_errors": errors, "quark_links": shown},
                          ensure_ascii=False, indent=2))
     else:
         print(format_text(shown, len(items), attempts), end="")

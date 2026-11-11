@@ -6,10 +6,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.8", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,11 +21,15 @@ jobs:
         run: |
           python skills/quark-search-save/scripts/pansou_search.py --help
           python skills/quark-search-save/scripts/find_quark_cli.py --help
+          python skills/quark-search-save/scripts/check_links.py --help
+          python skills/quark-search-save/scripts/install_quark_skill.py --help
       - name: Skill folder is self-contained
         run: |
           test -f skills/quark-search-save/SKILL.md
           test -f skills/quark-search-save/scripts/pansou_search.py
           test -f skills/quark-search-save/scripts/find_quark_cli.py
+          test -f skills/quark-search-save/scripts/check_links.py
+          test -f skills/quark-search-save/scripts/install_quark_skill.py
           if grep -nE '(^|[^>/])scripts/pansou_search\.py' skills/quark-search-save/SKILL.md | grep -v '<本 Skill 目录>'; then
             echo "SKILL.md must reference scripts relative to <本 Skill 目录>"; exit 1
           fi

@@ -8,7 +8,8 @@
 
 - 抓浏览器 cookie、逆向夸克网页接口、绕过官方 Skill 的环境检测
 - 部署服务、跑 Docker、开常驻进程
-- 引入第三方 Python 依赖（脚本只用标准库）
+- 引入第三方 Python 依赖（脚本只用标准库，兼容 Python 3.8）
+- 绕过官方 CLI、直接请求夸克接口（预检、选文件、追更都必须走官方 CLI 命令）
 - 托管或分发任何资源
 - 把夸克官方 Skill 的文件打包进本仓库（只能在用户同意后从夸克官方地址下载）
 
@@ -19,6 +20,7 @@ skills/quark-search-save/        ← 安装时整个目录会被拷走，必须�
   SKILL.md                       ← 给智能体看的说明（frontmatter 必须是合法 YAML）
   scripts/pansou_search.py       ← PanSou 搜索
   scripts/find_quark_cli.py      ← 定位夸克官方 CLI
+  scripts/check_links.py         ← 调官方 share-detail 预检候选链接
   scripts/install_quark_skill.py ← 用户同意后从夸克官方地址安装官方 Skill
 tests/                           ← 单元测试，不联网
 examples/                        ← 官方 Skill 演示

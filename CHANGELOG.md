@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 — 2026-11-11
+
+### Added
+- **转存前预检**：新脚本 `check_links.py` 对候选逐条调官方 `share-detail`（客态模式，无需登录），剔除已失效、已取消、不存在、提取码错误的分享，并给表格补上分享标题、文件数、内容预览。官方 CLI 不可用时自动跳过，流程照旧。搜索改为先取 10 条，预检后保留 5 条。
+- **只存需要的文件**：用户说“只要第 3 章 / 只要 PDF”时，用官方 `share-search` 或 `share-detail` 列出分享内的文件，选好后 `saveas --fid-list` 只存这些。
+- **追更**：已转存过的分享，用官方 `get-share-update-files` 查新增内容，同意后 `saveas-update` 只补新增的；只要其中几个时走 `get-share-saved-dir` + `saveas --fid-list`。
+- **搜索备用实例**：`PANSOU_URL` / `--url` 支持逗号分隔多个实例，按顺序尝试；默认 `https://s.panhunt.com`，没结果或出错时换 `https://so.252035.xyz`（备用实例只重试 1 次）。JSON 输出新增 `instance`、`instance_errors`。
+- 测试：`tests/test_check_links.py`、备用实例相关用例。
+
+### Changed
+- SKILL.md：官方 CLI 公共规则（`--session-input`、`--session-id`、`install.sh` 自检、`notice.text`）提到工作流之前，统一适用于预检、选文件、转存、追更；工作流改为 6 步。
+- Python 版本要求从 3.10+ 改为实际支持的 3.8+；CI 改测 3.8 和 3.12。
+
+### Docs
+- README 中英文同步更新：功能表、对话示例、工作流、预检脚本说明、备用实例、追更、限制与常见问题；英文 README 补全到与中文结构一致。
+
 ## 1.2.0 — 2026-11-11
 
 ### Added

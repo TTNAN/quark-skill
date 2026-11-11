@@ -1,10 +1,10 @@
 ---
 name: quark-search-save
 description: >-
-  对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，再调夸克官方 Skill 的 saveas 全自动转存，全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
+  对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，转存前用官方 share-detail 剔除失效链接，再调夸克官方 Skill 的 saveas 全自动转存（可只存选中文件、可追更新增内容），全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、只存第几章、这个分享有更新吗、把更新存下来、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -35,70 +35,112 @@ metadata:
      - `ok: false`：把 `error` 原文告诉用户，附上 `official_page` 让他按官方页面手动安装，然后停下。
      - 用户想装到别的位置（例如 Codex 的 `~/.codex/skills`）时，加 `--dir <目录>/quarkclouddrive`。官方要求装在智能体的**全局** skills 目录，不要装进项目目录。
      - 用户不同意安装：停下，告诉他转存这一步需要官方 Skill；也可以设置环境变量 `QUARK_SKILL_DIR` 指向已有的安装目录。
-2. **搜索用 PanSou。** 默认公共实例 `https://s.panhunt.com`，不用 key；只有用户自部署时才用 `PANSOU_URL` / `PANSOU_TOKEN`。
+2. **搜索用 PanSou。** 默认依次用两个公共实例（`https://s.panhunt.com`，没结果或出错再换 `https://so.252035.xyz`），不用 key；用户自部署时才用 `PANSOU_URL`（可用逗号写多个）/ `PANSOU_TOKEN`。
 
-## 工作流（4 步，缺一步都不算完成）
+## 调官方 CLI 的公共规则（每条命令都适用）
+
+- `--session-input` 和 `--session-id` 是官方 CLI 所有子命令的公共参数，**每次调用都必传**。
+  `--session-input` 逐字复制用户原始提问，禁止改写或摘要；
+  `--session-id` 在本次对话第一次调 CLI 时生成（如 `1784035443-a1b2c3`，即 `<unix 秒>-<6 位随机字母数字>`），同一对话后续复用。
+- 每次用户输入后，第一次调官方 CLI 前先跑一次官方自检：`bash <quark-skill-dir>/scripts/install.sh`。
+  返回 `success: true` 且 `updated: true` 时，本次业务命令额外带 `--skill-updated`，否则不带。
+  （`install.sh` 是官方 Skill 的脚本，本仓库没有这个文件。）
+- 官方 CLI 每次返回的非空 `notice.text`，在业务结果之后另起一段原样展示，不得省略、概括或改写。
+- 下文命令里的 `<公共参数>` 指 `--session-input "<用户原话>" --session-id "<会话 ID>"`（以及需要时的 `--skill-updated`）。
+
+## 工作流（缺一步都不算完成）
 
 ### 第 1 步：搜索
 
 ```bash
-python3 <本 Skill 目录>/scripts/pansou_search.py --kw "<关键词>" --limit 5 --json
+python3 <本 Skill 目录>/scripts/pansou_search.py --kw "<关键词>" --limit 10 --json > <临时目录>/qs-search.json
 ```
 
 **关键词怎么取：** 从用户原话里取出资源的核心名称本身——片名、书名、课程名。
 
 - 去掉书名号《》、引号，去掉“帮我找”“存到夸克”这类指令词。
-- 去掉版本号、年份、出版社、清晰度等修饰词（例如“第五版”“2024”“4K”），这些放到第 2 步挑选时再用。
+- 去掉版本号、年份、出版社、清晰度等修饰词（例如“第五版”“2024”“4K”），这些放到第 3 步挑选时再用。
+- 用户点名只要某一部分（例如“第 3 章”“只要 PDF”），这部分也不放进关键词，留到第 4 步。
 - 不要加用户没说过的词，不要换同义词、不要翻译。
 
 **结果怎么读：**
 
 - 脚本已经只保留夸克链接、按 URL 去重、按日期从新到旧排好序。
-- 脚本在结果为空时会**自动用同一关键词退避重试**（PanSou 对新关键词是异步聚合的，第一次常返回 0）。你不需要、也不允许再自己换词重搜。
+- 脚本在结果为空时会**自动用同一关键词退避重试，并自动换备用实例**。你不需要、也不允许再自己换词重搜。
 - `ok: false`：把 `error` 原文告诉用户，停下。
-- `quark_links` 为空：直接告诉用户搜不到。**不许换词重搜、不许编链接。** 可以建议他换个说法后再让你搜。
+- `quark_links` 为空：直接告诉用户搜不到。**不许换词重搜、不许编链接。** 可以建议他换个说法，或自部署 PanSou 实例。
 
-### 第 2 步：挑一个，让用户确认
+### 第 2 步：预检链接（剔除失效的）
 
-把结果做成表格给用户看：序号、标题、日期、链接，最多 5 条。
+```bash
+python3 <本 Skill 目录>/scripts/check_links.py --cli <quark-cli> --session-input "<用户原话>" --session-id "<会话 ID>" --input <临时目录>/qs-search.json --keep 5
+```
+
+脚本对每条候选调官方 `share-detail`（客态模式，不需要登录），剔除已失效、已取消、不存在、提取码错误的分享，保留最多 5 条。需要 `--skill-updated` 时也加上。
+
+- `shown`：要给用户看的候选，顺序不变。每条的 `check.status` 为 `valid`（附 `share_title`、`file_num`、`listed_size`、`preview` 前几个文件名）或 `unknown`（没验出来，`check.msg` 是原因，照样可选）。
+- `invalid`：被剔除的条目，只需在表格下方用一句话说明“另有 N 条已失效，已略过”。
+- `check_skipped: true`：官方 CLI 当前不可用（`reason` 原文），跳过预检，直接用 `shown`，流程照旧。
+- `notices` 非空：按公共规则原样展示。
+- `shown` 为空（全部失效）：告诉用户“搜到的这几条都失效了”，可以建议他换个说法后再让你搜。
+
+### 第 3 步：挑一个，让用户确认
+
+把 `shown` 做成表格给用户看：序号、标题、日期、文件数、内容预览（`preview` 前 2–3 个文件名）、链接。`unknown` 的条目文件数一栏写“未验证”。
 
 - 没有用户明确选中的那一条就不要转存。用户说“就第一个”“要带课件的那个”时按他说的来。
 - 用户提过的版本、年份、清晰度等修饰条件，用来在结果里帮他标出最匹配的一条，推荐后等他点头。
 
-### 第 3 步：转存（全自动）
+### 第 4 步（可选）：只存需要的文件
 
-用户确认后，用官方 Skill 的 `saveas` 转存整个分享链接：
+用户只要分享里的一部分（“只要第 3 章”“只要 PDF”“不要视频”），或者分享很大、他想先看看里面有什么时：
+
+- 有明确关键词：`node <quark-cli> share-search --url "<分享链接>" --keyword "<关键词>" <公共参数>`
+- 想浏览：`node <quark-cli> share-detail --url "<分享链接>" <公共参数>`（进子目录加 `--pdir-fid <文件夹 fid>`，翻页加 `--page`）。带提取码的链接加 `--passcode`。
+
+把返回的 `files` 列成表格（文件名、大小、类型），让用户选，记下所选文件的 `fid`。用户没有提出这类要求时，跳过这一步，整个分享一起存。
+
+### 第 5 步：转存（全自动）
+
+用户确认后，用官方 Skill 的 `saveas`：
 
 ```bash
-node <quark-cli> saveas --url "<分享链接>" --session-input "<用户原始提问，逐字复制>" --session-id "<unix 秒>-<6 位随机字母数字>"
+# 整个分享
+node <quark-cli> saveas --url "<分享链接>" <公共参数>
+# 只存第 4 步选中的文件
+node <quark-cli> saveas --url "<分享链接>" --fid-list "<fid1>,<fid2>" <公共参数>
 ```
 
-- `--session-input` 和 `--session-id` 是官方 CLI 所有子命令的公共参数，**每次调用都必传**。
-  `--session-input` 逐字复制用户原始提问，禁止改写或摘要；
-  `--session-id` 在本次对话第一次调 CLI 时生成（如 `1784035443-a1b2c3`），同一对话后续复用。
-- 每次用户输入后，第一次调官方 CLI 前先跑一次官方自检：`bash <quark-skill-dir>/scripts/install.sh`。
-  返回 `success: true` 且 `updated: true` 时，本次业务命令额外带 `--skill-updated`，否则不带。
-  （`install.sh` 是官方 Skill 的脚本，本仓库没有这个文件。）
-- 提取码：结果里 `needs_passcode: true` 时加 `--passcode "<password>"`；URL 里已有 `?pwd=` 时不用传。
+- 提取码：`needs_passcode: true` 时加 `--passcode "<password>"`；URL 里已有 `?pwd=` 时不用传。
 - 用户没有明确指定目录时，**严禁**传 `--to-pdir-path`、`--to-pdir-fid` 或 `"0"`，必须省略，让 CLI 用默认位置。
   用户明确说了目录才传 `--to-pdir-path "<目录路径>"`；目录不存在就先用官方 `search` 定位目录 fid 再传 `--to-pdir-fid`。
 
-### 第 4 步：回查确认
+### 第 6 步：回查确认
 
-转存成功（`code: 0`）后，用官方 Skill 的 `search` 按文件名查一遍，确认文件真的进了网盘，再告诉用户保存位置（用成功结果里 `data.save_path` 的原文）。
+转存成功（`code: 0`）后，用官方 Skill 的 `search` 按文件名查一遍，确认文件真的进了网盘，再告诉用户保存位置（用成功结果里 `data.save_path` 的原文）。最后可以提一句：“这个分享以后有更新的话，跟我说‘看看有没有更新’就能只补新增的。”
+
+## 追更：只转存分享里新增的内容
+
+适用于连载课程、每周更新的资料这类**已经转存过**的分享。用户说“这个链接有更新吗”“把更新存下来”时：
+
+1. 查更新：`node <quark-cli> get-share-update-files --url "<分享链接>" <公共参数>`。有更新时，按官方规则用表格（文件名、文件大小、文件类型）列出最多 5 项，再原样展示返回的 `msg`；没有更新时原样展示 `msg`。用户没要求就不翻页。
+2. 用户同意存全部更新：`node <quark-cli> saveas-update --url "<分享链接>" <公共参数>`，成功后原样展示 `msg`，不要自动再调一次。
+3. 用户只要其中几个：先 `get-share-saved-dir --url "<分享链接>" <公共参数>` 拿上次的目录 `pdir_fid`，再 `saveas --url ... --fid-list "<选中的 fid>" --to-pdir-fid <pdir_fid>`；拿不到 `pdir_fid` 时省略目录参数。不要用 `saveas-update`。
+4. 返回 `41043`（从没转存过）：告诉用户这个链接还没存过，没法查更新；他想存就走第 5 步的 `saveas`。
+
+想定时追更（例如“每天晚上 10 点帮我看看有没有更新”）：如果你所在的智能体支持定时任务，用它定时执行上面的“查更新”；不支持就如实告诉用户。完整规则以 `<quark-skill-dir>/references/file-saveas.md` 和 `references/file-share.md` 为准。
 
 ## 失败处理
 
 - `saveas` 返回 `code != 0`：把 `msg` 原文告诉用户，停下来，不许静默重试、不许换办法绕过去。
 - **例外：分享链接本身不可用**（`msg` 表明分享已失效、已取消、不存在、被封禁或提取码错误）：
   1. 先把 `msg` 原文告诉用户，说明是这条分享的问题，不是他的账号问题。
-  2. 如果第 1 步的表格里还有其他候选，把**下一条**（标题、日期、链接）推荐给他，问他要不要换这条。
-  3. 等用户明确同意后，再用新链接走第 3 步；用户不同意就停下。
+  2. 如果第 3 步的表格里还有其他候选，把**下一条**（标题、日期、链接）推荐给他，问他要不要换这条。
+  3. 等用户明确同意后，再用新链接走第 5 步；用户不同意就停下。
   - 一次只推荐一条，不许自动连续尝试多条，不许重新搜索、不许换关键词。
   - 候选用完了就直说“这几条都失效了”，可以建议他换个说法后再让你搜。
 - 报错是未授权 / 认证 / token 问题：先展示 `msg`，再引导用户重新走官方 Skill 的 `login`，不要直接重跑 `saveas`。
-- 转存同一链接的“更新内容”才用 `saveas-update`；首次转存一律用 `saveas`。
-- 官方 CLI 每次返回的非空 `notice.text`，在业务结果之后另起一段原样展示，不得省略、概括或改写。
+- 转存同一链接的“更新内容”才用 `saveas-update`（见“追更”）；首次转存一律用 `saveas`。
 
 ## 明确不做的事
 

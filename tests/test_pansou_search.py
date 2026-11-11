@@ -104,6 +104,7 @@ def test_main_json_output(monkeypatch, capsys):
     monkeypatch.setattr(ps, "fetch_json", lambda *a, **k: payload(LINKS))
     monkeypatch.setattr(ps, "search",
                         lambda *a, **k: (ps.clean_links(LINKS), 1))
+
     assert ps.main(["--kw", "线性代数", "--json", "--limit", "2"]) == 0
     out = json.loads(capsys.readouterr().out)
     assert out["ok"] and out["quark_total"] == 3 and len(out["quark_links"]) == 2
@@ -122,3 +123,45 @@ def test_main_rejects_bad_args():
         ps.main(["--kw", "   "])
     with pytest.raises(SystemExit):
         ps.main(["--kw", "x", "--limit", "0"])
+
+
+def test_parse_urls():
+    assert ps.parse_urls("https://a/, https://b  https://a") == ["https://a", "https://b"]
+    assert ps.parse_urls("") == []
+
+
+def test_search_many_falls_back_on_empty_and_error():
+    calls = []
+
+    def fake_search(kw, url, token, retries, timeout, sleep=None, log=None):
+        calls.append((url, retries))
+        if url == "https://a":
+            return [], retries + 1
+        if url == "https://b":
+            raise ps.SearchError("down")
+        return ps.clean_links(LINKS), 1
+
+    orig = ps.search
+    ps.search = fake_search
+    try:
+        items, attempts, inst, errors = ps.search_many(
+            "x", "https://a,https://b,https://c", retries=3, sleep=lambda s: None)
+    finally:
+        ps.search = orig
+    assert inst == "https://c" and len(items) == 3
+    assert calls == [("https://a", 3), ("https://b", 1), ("https://c", 1)]
+    assert attempts == 5 and errors and "https://b" in errors[0]
+
+
+def test_search_many_all_fail_raises(monkeypatch):
+    def boom(*a, **k):
+        raise ps.SearchError("down")
+    monkeypatch.setattr(ps, "search", boom)
+    with pytest.raises(ps.SearchError):
+        ps.search_many("x", "https://a,https://b")
+
+
+def test_search_many_empty_everywhere(monkeypatch):
+    monkeypatch.setattr(ps, "search", lambda *a, **k: ([], 1))
+    items, attempts, inst, errors = ps.search_many("x", "https://a,https://b")
+    assert items == [] and inst == "https://b" and attempts == 2
