@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1 — 2026-11-11
+
+### Fixed
+- SKILL.md 的 `description` 里有英文冒号加空格（`Quark Drive: search`），YAML 解析失败，`npx skills add` 会报 `No valid skills found` 直接跳过。改用 `>-` 块标量。1.0.0 起就存在这个问题。
+
+### Added
+- `tests/test_skill_manifest.py`：校验 frontmatter 是合法 YAML、版本号与脚本一致；CI 安装 `pyyaml`。
+
 ## 1.1.0 — 2026-11-11
 
 ### Fixed
