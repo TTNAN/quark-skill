@@ -26,7 +26,22 @@ No cookie scraping, no reverse engineering, no servers to deploy.
 
 ## Install
 
-Prerequisite: install the official Quark Drive skill (`quarkclouddrive`) and complete its `login` once.
+Prerequisite: install the official Quark Drive skill (`quarkclouddrive`) and complete its `login` once. Get the latest download link from the [official page](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT) and either tell your agent:
+
+```
+请安装 夸克网盘Skill,并授权账号
+技能地址：<the zip link copied from the official page>
+```
+
+or install it by hand into your agent's **global** skills directory:
+
+```bash
+mkdir -p ~/.claude/skills/quarkclouddrive && cd ~/.claude/skills/quarkclouddrive
+curl -L -o /tmp/quarkclouddrive.zip "https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip"
+unzip -o /tmp/quarkclouddrive.zip && bash scripts/install.sh   # needs/installs Node.js 16+
+```
+
+Then install this skill:
 
 ```bash
 npx skills add TTNAN/quark-skill -g -y

@@ -54,12 +54,42 @@
 
 - 一个支持 Agent Skill 的智能体（Claude Code、Codex、Cursor 等）
 - Python 3.10+（搜索脚本，只用标准库，不用 `pip install`）
-- Node.js（夸克官方 Skill 的 CLI 是 `node` 脚本，按官方说明安装即可）
+- Node.js 16+（夸克官方 Skill 的 CLI 要用；没有的话官方安装脚本会自动装）
 - 一个夸克网盘账号
 
 **1. 装好夸克官方 Skill 并登录**
 
-本 Skill 的转存一步依赖夸克官方 Skill（`quarkclouddrive`）。先按官方说明安装，并在智能体里完成一次 `login` 授权。Skill 会自动找到它的安装位置；装在非常规目录时，设置环境变量 `QUARK_SKILL_DIR` 指过去即可。
+本 Skill 的转存一步依赖夸克官方的「夸克网盘 Skill」（目录名 `quarkclouddrive`）。官方介绍和最新下载地址在 [夸克网盘 Skill 官方页面](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT)。
+
+**方式一：让智能体自己装（官方推荐）**
+
+打开官方页面，点「复制技能地址」，然后把下面这段话发给你的智能体（技能地址换成你复制到的最新地址）：
+
+```
+请安装 夸克网盘Skill,并授权账号
+技能地址：https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip
+```
+
+智能体会下载、解压、运行官方安装脚本，再引导你登录授权。上面的地址是写这份 README 时的 1.0.25 版，版本更新后以官方页面为准。
+
+**方式二：手动安装**
+
+```bash
+# 以 Claude Code 为例；Codex 换成 ~/.codex/skills，其他智能体换成它的全局 skills 目录
+mkdir -p ~/.claude/skills/quarkclouddrive && cd ~/.claude/skills/quarkclouddrive
+curl -L -o /tmp/quarkclouddrive.zip "https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip"
+unzip -o /tmp/quarkclouddrive.zip      # 压缩包里直接是 SKILL.md、scripts/、references/
+bash scripts/install.sh                # 检查并安装 Node.js 16+、安装 CLI、自检
+node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
+```
+
+官方要求装在智能体的**全局** skills 目录，不要装进某个项目目录，否则换个项目就找不到了。
+
+**然后登录授权**
+
+在智能体里说一句「登录夸克网盘」，按提示完成官方 Skill 的 `login`（浏览器授权）。授权由官方 Skill 管理，本仓库不经手。
+
+装好后本 Skill 会自动找到它；装在非常规目录时，设置环境变量 `QUARK_SKILL_DIR` 指过去即可。
 
 **2. 安装本 Skill**
 
@@ -243,7 +273,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 
 ## 支持哪些智能体
 
-能跑夸克官方 Skill 的智能体都能用，包括 Claude Code、Codex、Cursor、Trae、Qoder、OpenCode、Cherry Studio、Kimi、豆包、通义等。完整清单以夸克官方 Skill 的环境检测为准。
+能跑夸克官方 Skill 的智能体都能用。官方页面目前列出的已支持平台是千问办公助理、Codex 和 OpenClaw；Claude Code、Cursor 等能加载 Agent Skill、能执行 `node` 的智能体，按上面的手动方式装好后一般也能用。以 [官方页面](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT) 为准。
 
 ## 常见问题
 
