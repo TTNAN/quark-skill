@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400">
+<defs><linearGradient id="bb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F5F3FF"/><stop offset="1" stop-color="#E6F7FE"/></linearGradient>
+<linearGradient id="tx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6D5BFF"/><stop offset="1" stop-color="#1FB5E8"/></linearGradient></defs>
+<rect width="1280" height="400" fill="url(#bb)"/>
+<g transform="translate(150 80) scale(0.469)"><svg width="512" height="512" viewBox="0 0 512 512"><defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6D5BFF"/>
+      <stop offset="0.55" stop-color="#3F7BFF"/>
+      <stop offset="1" stop-color="#1FC8F2"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.3" cy="0.22" r="0.8">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="116" fill="url(#glow)"/>
+  <g transform="translate(14 14)">
+  <!-- orbit -->
+  <ellipse cx="236" cy="228" rx="190" ry="78" fill="none" stroke="#fff" stroke-opacity="0.38" stroke-width="7" transform="rotate(-28 236 228)"/>
+  <!-- lens + handle -->
+  <circle cx="236" cy="228" r="98" fill="#fff" fill-opacity="0.12" stroke="#fff" stroke-width="34"/>
+  <line x1="310" y1="302" x2="384" y2="376" stroke="#fff" stroke-width="44" stroke-linecap="round"/>
+  <!-- save arrow -->
+  <g stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <line x1="236" y1="176" x2="236" y2="262"/>
+    <polyline points="200,228 236,264 272,228"/>
+  </g>
+  <!-- three quarks: colour charge -->
+  <circle cx="72" cy="271" r="21" fill="#FF5C8A" stroke="#fff" stroke-width="6"/>
+  <circle cx="381" cy="214" r="21" fill="#3DF2B0" stroke="#fff" stroke-width="6"/>
+  <circle cx="329" cy="116" r="17" fill="#FFD23F" stroke="#fff" stroke-width="6"/>
+  </g>
+</svg></g>
+<text x="430" y="190" font-family="Noto Sans SC" font-weight="700" font-size="92" fill="url(#tx)">quark-skill</text>
+<text x="434" y="258" font-family="Noto Sans SC" font-size="38" fill="#334155">一句话，把网盘资源存进夸克</text>
+<text x="434" y="312" font-family="Noto Sans SC" font-size="24" fill="#64748B">PanSou 搜索 · 夸克官方 saveas 转存 · 回查确认</text>
+</svg>
