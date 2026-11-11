@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install pytest pyyaml
+      - run: python -m pytest -q
+      - name: Scripts start
+        run: |
+          python skills/quark-search-save/scripts/pansou_search.py --help
+          python skills/quark-search-save/scripts/find_quark_cli.py --help
+      - name: Skill folder is self-contained
+        run: |
+          test -f skills/quark-search-save/SKILL.md
+          test -f skills/quark-search-save/scripts/pansou_search.py
+          test -f skills/quark-search-save/scripts/find_quark_cli.py
+          if grep -nE '(^|[^>/])scripts/pansou_search\.py' skills/quark-search-save/SKILL.md | grep -v '<本 Skill 目录>'; then
+            echo "SKILL.md must reference scripts relative to <本 Skill 目录>"; exit 1
+          fi
