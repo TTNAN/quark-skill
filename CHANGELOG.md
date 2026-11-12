@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.5 — 2026-11-12
+
+### Changed
+- `find_quark_cli.py` 单个候选的 `--help` 验证超时 30→10 秒，某个候选挂起时不会静默等半分钟。
+- 验证版本的测试改为断言 README、README.en、CONTRIBUTING 里声明验证版本的那一行本身，不再是全文子串（README 的下载地址里也带版本号）。
+
 ## 1.3.4 — 2026-11-12
 
 ### Changed

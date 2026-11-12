@@ -74,9 +74,12 @@ def test_update_files_no_change():
 def test_fixtures_match_verified_version():
     assert json.loads(read("install.json"))["version"] == VERIFIED_OFFICIAL_VERSION
     root = os.path.join(HERE, "..")
-    for doc in ("README.md", "CONTRIBUTING.md"):
+    # 钉住声明验证版本的那一行本身，不是全文子串（README 的下载地址里也带版本号）
+    for doc, marker in (("README.md", "已实测验证"), ("README.en.md", "Verified end to end"),
+                        ("CONTRIBUTING.md", "当前验证版本")):
         with open(os.path.join(root, doc), encoding="utf-8") as f:
-            assert VERIFIED_OFFICIAL_VERSION in f.read(), doc
+            lines = [ln for ln in f if marker in ln]
+        assert len(lines) == 1 and VERIFIED_OFFICIAL_VERSION in lines[0], doc
 
 
 def test_install_output_shape():

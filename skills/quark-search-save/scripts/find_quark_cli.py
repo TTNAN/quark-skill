@@ -64,7 +64,7 @@ def version_key(v):
     return tuple(int(x) for x in re.findall(r"\d+", v or "")) or (-1,)
 
 
-def verify_cli(cli, timeout=30):
+def verify_cli(cli, timeout=10):
     """跑一次 node <cli> --help，返回 None 表示能用，否则返回原因。"""
     node = shutil.which("node")
     if not node:
