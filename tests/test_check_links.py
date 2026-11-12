@@ -102,3 +102,17 @@ def test_run_cli_builds_command():
     assert c[:4] == ["node", "/c.cjs", "share-detail", "--url"]
     assert "--passcode" in c and "ab12" in c and "--skill-updated" in c
     assert c[c.index("--session-input") + 1] == "原话"
+
+
+def test_run_cli_decodes_utf8_with_replace():
+    # Windows 中文系统默认 GBK：必须显式 UTF-8 + replace，否则读线程会抛 UnicodeDecodeError
+    seen = {}
+
+    class P:
+        stdout = '{"code":0,"type":"result","data":{}}'
+
+    def runner(cmd, **kw):
+        seen.update(kw)
+        return P()
+    cl.run_cli("cli", {"url": "https://pan.quark.cn/s/x"}, "q", "s", runner=runner)
+    assert seen["encoding"] == "utf-8" and seen["errors"] == "replace"

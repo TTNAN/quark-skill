@@ -285,7 +285,8 @@ python3 skills/quark-search-save/scripts/check_links.py --cli <官方 CLI 路径
 | --- | --- |
 | `shown` | 要给你看的候选（最多 `--keep` 条，顺序不变），每条多一个 `check` |
 | `check.status` | `valid` 验过能用；`unknown` 没验出来（原因在 `check.msg`），照样可选 |
-| `check.file_num` / `preview` / `listed_size` | 分享里的文件数、前 3 个文件名、首页文件的总大小 |
+| `check.file_num` / `preview` / `listed_size` | 首层条目数、前 3 个文件名、首层文件的总大小 |
+| `check.total_files` / `total_size` | 整个分享（含子文件夹）的文件总数和总大小，官方返回了才有 |
 | `invalid` | 被剔掉的条目、夸克返回的原因和 `errno` |
 | `check_skipped` | 官方 CLI 当前不可用时为 `true`，原样返回候选，流程照旧 |
 | `notices` | 官方 CLI 返回的提示，需要原样展示 |

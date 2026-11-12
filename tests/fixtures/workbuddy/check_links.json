@@ -1,0 +1,107 @@
+{
+  "ok": true,
+  "check_skipped": false,
+  "checked": 10,
+  "valid_count": 9,
+  "shown": [
+    {
+      "title": "学习资料: 《机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）》",
+      "date": "2026-11-11",
+      "url": "https://pan.quark.cn/s/94eb5b628b24",
+      "password": "",
+      "source": "tg:xuexiziliaobaibaoku",
+      "needs_passcode": false,
+      "check": {
+        "share_title": "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）",
+        "file_num": 1,
+        "folders": 1,
+        "listed_size": "",
+        "preview": [
+          "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）"
+        ],
+        "status": "valid"
+      }
+    },
+    {
+      "title": "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）",
+      "date": "2026-11-11",
+      "url": "https://pan.quark.cn/s/5edcfe70200c",
+      "password": "",
+      "source": "plugin:yunso",
+      "needs_passcode": false,
+      "check": {
+        "share_title": "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）",
+        "file_num": 1,
+        "folders": 1,
+        "listed_size": "",
+        "preview": [
+          "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）"
+        ],
+        "status": "valid"
+      }
+    },
+    {
+      "title": "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）",
+      "date": "2026-11-09",
+      "url": "https://pan.quark.cn/s/14b93980cb7f",
+      "password": "",
+      "source": "plugin:yunso",
+      "needs_passcode": false,
+      "check": {
+        "share_title": "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）",
+        "file_num": 1,
+        "folders": 1,
+        "listed_size": "",
+        "preview": [
+          "机器学习的数学基础（53集 高等数学 线性代数 概率论 数理统计）"
+        ],
+        "status": "valid"
+      }
+    },
+    {
+      "title": "学习资料: 《宋浩-高等数学精选750题》",
+      "date": "2026-11-08",
+      "url": "https://pan.quark.cn/s/399f5d7b730f",
+      "password": "",
+      "source": "tg:xuexiziliaobaibaoku",
+      "needs_passcode": false,
+      "check": {
+        "share_title": "宋浩 - 高等数学精选750题",
+        "file_num": 1,
+        "folders": 1,
+        "listed_size": "",
+        "preview": [
+          "宋浩 - 高等数学精选750题"
+        ],
+        "status": "valid"
+      }
+    },
+    {
+      "title": "学习资料: 《同济大学：高等数学（44节精讲）》",
+      "date": "2026-11-07",
+      "url": "https://pan.quark.cn/s/6df0023a59e1",
+      "password": "",
+      "source": "tg:xuexiziliaobaibaoku",
+      "needs_passcode": false,
+      "check": {
+        "share_title": "同济大学：高等数学（44节精讲）",
+        "file_num": 1,
+        "folders": 1,
+        "listed_size": "",
+        "preview": [
+          "同济大学：高等数学（44节精讲）"
+        ],
+        "status": "valid"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "title": "【05453】应用数值线性代数J.W.Demmel中文版王国荣翻译图灵丛书",
+      "url": "https://pan.quark.cn/s/86990ff3fe27",
+      "msg": "创建链接过程遇到问题，显示分享的文件不存在，可能已被删除或加密，请前往夸克网盘内查看文件状态是否正常。"
+    }
+  ],
+  "notices": [],
+  "keyword": "线性代数"
+}

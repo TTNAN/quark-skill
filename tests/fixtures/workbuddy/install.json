@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "status": "installed",
+  "skill_dir": "C:\\Users\\USER\\.workbuddy\\skills\\quarkclouddrive",
+  "cli": "C:\\Users\\USER\\.workbuddy\\skills\\quarkclouddrive\\scripts\\quark-drive.cjs",
+  "version": "1.0.25",
+  "source": "https://pdds.quark.cn/download/stfile/eekkigineefiegmgo/quarkclouddrive-1.0.25.zip",
+  "via": "skill_config",
+  "setup": {
+    "success": true,
+    "verified": "exit0+cli+help",
+    "install_result": {
+      "type": "install_result",
+      "success": true,
+      "updated": false,
+      "from_version": "1.0.25",
+      "to_version": "1.0.25"
+    }
+  }
+}

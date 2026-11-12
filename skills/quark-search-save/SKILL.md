@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，转存前用官方 share-detail 剔除失效链接，再调夸克官方 Skill 的 saveas 全自动转存（可只存选中文件、可追更新增内容），全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、只存第几章、这个分享有更新吗、把更新存下来、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.3.1"
+  version: "1.3.2"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -80,7 +80,7 @@ python3 <本 Skill 目录>/scripts/check_links.py --cli <quark-cli> --session-in
 
 脚本对每条候选调官方 `share-detail`（客态模式，不需要登录），只剔除**明确失效**的分享（已知失效码 41004 / 41006 / 41007，或分享里一个文件都没有），保留最多 5 条。网络抖动、限流、提取码问题等拿不准的情况一律标 `unknown`，留给用户决定。需要 `--skill-updated` 时也加上。
 
-- `shown`：要给用户看的候选，顺序不变。每条的 `check.status` 为 `valid`（附 `share_title`、`file_num`、`listed_size`、`preview` 前几个文件名）或 `unknown`（没验出来，`check.msg` 是原因，照样可选）。
+- `shown`：要给用户看的候选，顺序不变。每条的 `check.status` 为 `valid`（附 `share_title`、`file_num` 首层条目数、`preview` 前几个文件名；有的话还附 `total_files` 分享里的文件总数和 `total_size` 总大小）或 `unknown`（没验出来，`check.msg` 是原因，照样可选）。
 - `invalid`：被剔除的条目，只需在表格下方用一句话说明“另有 N 条已失效，已略过”。
 - `check_skipped: true`：官方 CLI 当前不可用（`reason` 原文），跳过预检，直接用 `shown`，流程照旧。
 - `notices` 非空：按公共规则原样展示。
@@ -88,7 +88,7 @@ python3 <本 Skill 目录>/scripts/check_links.py --cli <quark-cli> --session-in
 
 ### 第 3 步：挑一个，让用户确认
 
-把 `shown` 做成表格给用户看：序号、标题、日期、文件数、内容预览（`preview` 前 2–3 个文件名）、链接。`unknown` 的条目文件数一栏写“未验证”。
+把 `shown` 做成表格给用户看：序号、标题、日期、文件数（优先 `total_files`，没有再用 `file_num`）、大小（`total_size`，没有就省略这一栏）、内容预览（`preview` 前 2–3 个文件名；分享只有一个顶层文件夹时，预览就是那个文件夹名）、链接。`unknown` 的条目文件数一栏写“未验证”。
 
 - 没有用户明确选中的那一条就不要转存。用户说“就第一个”“要带课件的那个”时按他说的来。
 - 用户提过的版本、年份、清晰度等修饰条件，用来在结果里帮他标出最匹配的一条，推荐后等他点头。

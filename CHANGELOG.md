@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 1.3.2 — 2026-11-12
+
+首次在真实智能体（WorkBuddy，Windows，官方 Skill 1.0.25）里跑通全链路：自动安装 → 搜索 → 预检 → 列文件 → `saveas --fid-list` → 回查 → 查更新。字段名和之前的假设一致。
+
+### Fixed
+- **Windows 下预检刷屏报错**：中文 Windows 默认 GBK，官方 CLI 往 stderr 输出的字节让 subprocess 读线程抛 `UnicodeDecodeError`（结果没受影响，但日志全是 traceback）。`check_links.py` 和 `install_quark_skill.py` 调子进程时显式 `encoding="utf-8", errors="replace"`。
+
+### Added
+- **真实固件回归测试**：`tests/fixtures/workbuddy/` 存了脱敏后的官方 CLI 原始输出（share-detail 有效 / 失效、saveas、search 回查、get-share-update-files、安装结果），`tests/test_real_fixtures.py` 对着它们断言。官方改返回结构时 CI 会先红。
+- 预检结果新增 `total_files` / `total_size`（取自 `share_info.file_only_num` / `size`）。很多分享只有一个顶层文件夹，首层“1 个文件”没意义，现在能显示“53 个文件，2.9 GB”。
+- `invalid` 条目带上 `errno`。
 
 ### Changed
 - 最低 Python 版本定为 **3.9**（macOS 自带的 python3 就是 3.9）。CI 改回 `ubuntu-latest`，在官方 `python:3.9-slim` / `python:3.13-slim` 容器里测，不再依赖 runner 自带哪些 Python 版本，也不再钉死会被 GitHub 退役的 ubuntu-22.04。

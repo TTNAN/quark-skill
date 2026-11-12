@@ -120,7 +120,8 @@ def read_version(skill_dir):
 
 
 def _run(cmd, timeout):
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                          timeout=timeout)
 
 
 def run_official_setup(skill_dir, timeout=600, run=_run, which=shutil.which):

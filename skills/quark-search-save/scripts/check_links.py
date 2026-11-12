@@ -70,13 +70,20 @@ def classify(result):
             return "invalid", {"msg": "分享里没有文件（可能已被删除或屏蔽）", "errno": None}
         folders = sum(1 for f in files if str(f.get("file_type")) == "0")
         size = sum(int(f.get("size") or 0) for f in files if str(f.get("file_type")) != "0")
-        return "valid", {
-            "share_title": token_info.get("title") or "",
+        info = {
+            "share_title": token_info.get("title") or share_info.get("title") or "",
             "file_num": share_info.get("file_num", data.get("file_count", len(files))),
             "folders": folders,
             "listed_size": human_size(size) if size else "",
             "preview": [f.get("filename") or "" for f in files[:PREVIEW]],
         }
+        # 分享常常只有一个顶层文件夹；share_info 里有递归统计，比首页更能说明里面有什么。
+        # 字段名来自 WorkBuddy 实测（tests/fixtures/workbuddy/share-detail-valid.jsonl）。
+        if isinstance(share_info.get("file_only_num"), int):
+            info["total_files"] = share_info["file_only_num"]
+        if isinstance(share_info.get("size"), int) and share_info["size"] > 0:
+            info["total_size"] = human_size(share_info["size"])
+        return "valid", info
     if result.get("action") == "runtime":
         return "runtime", {"msg": msg}
     errno = errno_of(result)
@@ -104,7 +111,10 @@ def run_cli(cli, link, session_input, session_id, skill_updated=False, timeout=3
     if skill_updated:
         cmd.append("--skill-updated")
     try:
-        proc = runner(cmd, capture_output=True, text=True, timeout=timeout)
+        # 显式 UTF-8 + replace：Windows 中文系统默认 GBK，node 往 stderr 打的非 UTF-8 字节
+        # 会让 subprocess 的读线程抛 UnicodeDecodeError（WorkBuddy 实测）。
+        proc = runner(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                      timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"code": -1, "msg": "share-detail 超时", "type": "result"}
     except OSError as e:
@@ -149,7 +159,8 @@ def check(links, cli, session_input, session_id, keep=5, workers=3, skill_update
                 "shown": links[:keep], "invalid": [], "notices": notices}
 
     shown = [c for c in checked if c["check"]["status"] != "invalid"][:keep]
-    invalid = [{"title": c["title"], "url": c["url"], "msg": c["check"]["msg"]}
+    invalid = [{"title": c["title"], "url": c["url"], "msg": c["check"]["msg"],
+                "errno": c["check"].get("errno")}
                for c in checked if c["check"]["status"] == "invalid"]
     return {"ok": True, "check_skipped": False, "checked": len(checked),
             "valid_count": sum(1 for c in checked if c["check"]["status"] == "valid"),
