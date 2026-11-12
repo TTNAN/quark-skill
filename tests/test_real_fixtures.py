@@ -73,3 +73,18 @@ def test_install_output_shape():
     r = json.loads(read("install.json"))
     assert r["ok"] and r["setup"]["verified"] == "exit0+cli+help"
     assert r["setup"]["install_result"]["type"] == "install_result"
+
+
+def test_share_search_hit_shape():
+    r = lines("share-search-hit.jsonl")[0]
+    assert r["code"] == 0 and r["action"] == "share-search"
+    f = r["data"]["files"][0]
+    assert r["data"]["file_count"] == 1
+    assert f["filename"] == "第3章-线性代数"
+    assert f["file_type"] == "0"  # 和 share-detail 的 files[] 一样是字符串
+    assert f["fid"]  # saveas --fid-list 要用的就是它
+
+
+def test_share_search_empty_is_success_not_error():
+    r = lines("share-search-empty.jsonl")[0]
+    assert r["code"] == 0 and r["data"] == {"file_count": 0, "files": []}

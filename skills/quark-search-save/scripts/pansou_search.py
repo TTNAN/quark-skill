@@ -30,7 +30,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__version__ = "1.3.2"
+__version__ = "1.3.3"
 
 DEFAULT_URL = "https://s.panhunt.com"
 # 默认实例列表：第一个没结果或出错时依次尝试后面的

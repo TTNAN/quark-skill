@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.3 — 2026-11-12
+
+### Added
+- `share-search` 的真实固件（命中 / 没命中，WorkBuddy 实测），回归测试钉住返回形状。至此 SKILL.md 用到的官方命令都有真实固件。
+
+### Docs
+- SKILL.md 第 4 步写明：`file_type` 是字符串，`"0"` 为文件夹；`share-search` 没搜到返回 `code: 0` + 空 `files`，不是报错，改用 `share-detail` 浏览。
+
 ## 1.3.2 — 2026-11-12
 
 首次在真实智能体（WorkBuddy，Windows，官方 Skill 1.0.25）里跑通全链路：自动安装 → 搜索 → 预检 → 列文件 → `saveas --fid-list` → 回查 → 查更新。字段名和之前的假设一致。

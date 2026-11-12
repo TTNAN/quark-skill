@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，转存前用官方 share-detail 剔除失效链接，再调夸克官方 Skill 的 saveas 全自动转存（可只存选中文件、可追更新增内容），全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、只存第几章、这个分享有更新吗、把更新存下来、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.3.2"
+  version: "1.3.3"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -100,7 +100,7 @@ python3 <本 Skill 目录>/scripts/check_links.py --cli <quark-cli> --session-in
 - 有明确关键词：`node <quark-cli> share-search --url "<分享链接>" --keyword "<关键词>" <公共参数>`
 - 想浏览：`node <quark-cli> share-detail --url "<分享链接>" <公共参数>`（进子目录加 `--pdir-fid <文件夹 fid>`，翻页加 `--page`）。带提取码的链接加 `--passcode`。
 
-把返回的 `files` 列成表格（文件名、大小、类型），让用户选，记下所选文件的 `fid`。用户没有提出这类要求时，跳过这一步，整个分享一起存。
+把返回的 `files` 列成表格（文件名、大小、类型），让用户选，记下所选文件的 `fid`。`file_type` 是字符串，`"0"` 表示文件夹（显示成“文件夹”，大小写“—”）。`share-search` 没搜到时返回 `code: 0` 且 `files` 为空，不是报错：告诉用户分享里没有匹配的文件，改用 `share-detail` 浏览让他挑。用户没有提出这类要求时，跳过这一步，整个分享一起存。
 
 ### 第 5 步：转存（全自动）
 
