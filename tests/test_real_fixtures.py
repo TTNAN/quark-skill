@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "skills", "quark-search-save", "scri
 import check_links as cl  # noqa: E402
 
 FX = os.path.join(HERE, "fixtures", "workbuddy")
+# 这批固件来自哪个官方版本。官方升级后重跑真机、刷新固件，并同步改这里、README 和 CONTRIBUTING。
+VERIFIED_OFFICIAL_VERSION = "1.0.25"
 
 
 def read(name):
@@ -67,6 +69,14 @@ def test_search_verify_has_result_then_artifact():
 def test_update_files_no_change():
     r = lines("get-share-update-files.jsonl")[0]
     assert r["code"] == 0 and r["data"]["total"] == 0 and r["data"]["files"] == []
+
+
+def test_fixtures_match_verified_version():
+    assert json.loads(read("install.json"))["version"] == VERIFIED_OFFICIAL_VERSION
+    root = os.path.join(HERE, "..")
+    for doc in ("README.md", "CONTRIBUTING.md"):
+        with open(os.path.join(root, doc), encoding="utf-8") as f:
+            assert VERIFIED_OFFICIAL_VERSION in f.read(), doc
 
 
 def test_install_output_shape():

@@ -231,8 +231,9 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
 | --- | --- | --- |
 | `--kw` | 关键词（书名、课程名本身），必填 | — |
 | `--limit` | 最多输出几条 | `5` |
-| `--retries` | 结果为空时用同一关键词重试几次，`0` 表示不重试 | `3`（约 30 秒） |
-| `--timeout` | 单次请求超时秒数 | `30` |
+| `--retries` | 结果为空时用同一关键词重试几次，`0` 表示不重试 | `3` |
+| `--timeout` | 单次请求超时秒数（公共实例实测单次要 6–18 秒） | `25` |
+| `--max-wait` | 重试的总时间预算（秒），超出就不再重试，但每个实例至少请求一次；`0` 表示不限 | `60` |
 | `--url` / `--token` | 覆盖 `PANSOU_URL` / `PANSOU_TOKEN`；`--url` 也可以逗号分隔写多个 | 见上表 |
 | `--json` | 以 JSON 输出，给智能体读 | 关 |
 
@@ -291,18 +292,19 @@ python3 skills/quark-search-save/scripts/check_links.py --cli <官方 CLI 路径
 | `check_skipped` | 官方 CLI 当前不可用时为 `true`，原样返回候选，流程照旧 |
 | `notices` | 官方 CLI 返回的提示，需要原样展示 |
 
-它只调用官方 CLI，不直接请求任何夸克接口；默认 3 个并发、每条 30 秒超时（`--timeout`），每验完一条往 stderr 打一行进度（`--quiet` 关闭）。
+它只调用官方 CLI，不直接请求任何夸克接口；默认 3 个并发、每条 20 秒超时（`--timeout`），每验完一条往 stderr 打一行进度（`--quiet` 关闭）。
 
 ### 官方 Skill 是怎么被找到的
 
-`find_quark_cli.py` 按这个顺序找 `quarkclouddrive`，找到第一个就停：
+设了环境变量 `QUARK_SKILL_DIR` 就只认它。没设时，`find_quark_cli.py` 把下面这些位置都查一遍：
 
-1. 环境变量 `QUARK_SKILL_DIR`
-2. 和本 Skill 同级的 `quarkclouddrive` 目录（两个 Skill 装在同一个 skills 目录下时最常见）
-3. 当前目录和家目录下的常见位置：`.claude/skills`、`.agents/skills`、`.codex/skills`、`.cursor/skills`、`.trae/skills`、`.qoder/skills`、`.opencode/skills`、`.config/opencode/skills`、`.openclaw/skills`、`.skills`
-4. 兜底：`~/.*/skills/quarkclouddrive` 和 `~/.*/*/skills/quarkclouddrive`
+1. 和本 Skill 同级的 `quarkclouddrive` 目录（两个 Skill 装在同一个 skills 目录下时最常见）
+2. 家目录和当前目录下的常见位置：`.claude/skills`、`.agents/skills`、`.codex/skills`、`.cursor/skills`、`.trae/skills`、`.qoder/skills`、`.opencode/skills`、`.config/opencode/skills`、`.openclaw/skills`、`.workbuddy/skills`、`.codebuddy/skills`、`.skills`
+3. 兜底：`~/.*/skills/quarkclouddrive` 和 `~/.*/*/skills/quarkclouddrive`
 
-找不到时，`--json` 会列出所有查过的路径（`checked` 字段），方便你判断装到哪去了。
+每个找到的 `quark-drive.cjs` 都会跑一次 `node quark-drive.cjs --help`，跑不起来的（没装 node、文件被截断）不算数，记在 `broken` 里。能跑的有好几份时，取官方 `SKILL.md` 里版本号最高的，所以项目里残留的旧版不会盖过全局新装的。`--no-verify` 可以跳过运行验证。
+
+找不到时，`--json` 会列出所有查过的路径（`checked`）和跑不起来的原因（`broken`），方便你判断装到哪去了。
 
 ### 找不到时怎么自动安装
 
@@ -362,6 +364,8 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 
 能跑夸克官方 Skill 的智能体都能用。官方页面目前列出的已支持平台是千问办公助理、WorkBuddy、Codex 和 OpenClaw；Claude Code、Cursor 等能加载 Agent Skill、能执行 `node` 的智能体，按上面的手动方式装好后一般也能用。以 [官方页面](https://b.quark.cn/apps/quarkcloud_skill_info/routes/V-sc7gOBT) 为准。
 
+**已实测验证：** 官方 Skill **1.0.25**，WorkBuddy（Windows），2026-11-12，全链路（安装、搜索、预检、列文件、只存选中文件、回查、查更新）跑通。官方原始输出存在 `tests/fixtures/workbuddy/`。自动安装总是取官方最新版，官方升级后返回结构若有变化，以新版为准；欢迎在 issue 里反馈。
+
 ## 常见问题
 
 <details>
@@ -374,7 +378,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 <details>
 <summary>明明有资源却说搜不到？</summary>
 
-PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。搜索脚本已经会用同一关键词自动重试 3 次（共约 30 秒），还没有就换备用实例再试。仍然没有时，多半是关键词太长：只说书名、课程名本身，别带版本号、年份、出版社。
+PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。搜索脚本已经会用同一关键词自动重试 3 次（退避 5、10、15 秒），还没有就换备用实例再试。整个搜索有 60 秒的重试预算，加上每次请求最多 25 秒，最坏大约两分钟就会给出结果。仍然没有时，多半是关键词太长：只说书名、课程名本身，别带版本号、年份、出版社。
 
 </details>
 

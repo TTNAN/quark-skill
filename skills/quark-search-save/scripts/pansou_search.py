@@ -6,7 +6,7 @@
 用法：
     python3 pansou_search.py --kw "关键词" [--limit 5] [--json]
                              [--url https://s.panhunt.com] [--token <TOKEN>]
-                             [--retries 3] [--timeout 30]
+                             [--retries 3] [--timeout 25] [--max-wait 60]
 
 说明：
 - 默认依次使用两个 PanSou 公共实例 https://s.panhunt.com 和 https://so.252035.xyz ，
@@ -30,12 +30,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__version__ = "1.3.3"
+__version__ = "1.3.4"
 
 DEFAULT_URL = "https://s.panhunt.com"
 # 默认实例列表：第一个没结果或出错时依次尝试后面的
 DEFAULT_URLS = (DEFAULT_URL, "https://so.252035.xyz")
 FALLBACK_RETRIES = 1  # 备用实例只重试 1 次，避免总耗时过长
+DEFAULT_TIMEOUT = 25  # 单次请求超时（秒）。s.panhunt.com 实测单次 6–18 秒才返回，别再往下调
+DEFAULT_MAX_WAIT = 60  # 重试总预算（秒）：最坏约 60 + 实例数 × 25 ≈ 110 秒
 RETRY_DELAYS = (5, 10, 15)  # 第 n 次重试前等待的秒数（PanSou 冷启动实测需 10–30 秒）
 _DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
@@ -133,10 +135,11 @@ def clean_links(raw_links):
     return items
 
 
-def search(keyword, base_url=DEFAULT_URL, token=None, retries=3, timeout=30,
-           sleep=time.sleep, fetch=fetch_json, log=None):
+def search(keyword, base_url=DEFAULT_URL, token=None, retries=3, timeout=DEFAULT_TIMEOUT,
+           sleep=time.sleep, fetch=fetch_json, log=None, deadline=None, now=time.monotonic):
     """搜索夸克链接。结果为空时用同一关键词退避重试 retries 次。
 
+    deadline（time.monotonic 时刻）到了就不再重试，但至少请求一次。
     返回 (items, attempts)。
     """
     url = build_url(base_url, keyword)
@@ -145,6 +148,10 @@ def search(keyword, base_url=DEFAULT_URL, token=None, retries=3, timeout=30,
     for attempt in range(retries + 1):
         if attempt:
             delay = RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)]
+            if deadline is not None and now() + delay + timeout > deadline:
+                if log:
+                    log("已经等了很久，不再重试 {}。".format(base_url))
+                break
             if log:
                 log("暂无结果，PanSou 可能还在聚合，{} 秒后用同一关键词重试（第 {}/{} 次）…".format(
                     delay, attempt, retries))
@@ -170,14 +177,17 @@ def parse_urls(value):
     return out
 
 
-def search_many(keyword, urls=DEFAULT_URLS, token=None, retries=3, timeout=30,
-                sleep=time.sleep, log=None):
+def search_many(keyword, urls=DEFAULT_URLS, token=None, retries=3, timeout=DEFAULT_TIMEOUT,
+                sleep=time.sleep, log=None, max_wait=DEFAULT_MAX_WAIT, now=time.monotonic):
     """按顺序在多个 PanSou 实例上搜索，拿到结果就停。
 
     第一个实例用完整的 retries；后面的备用实例最多重试 FALLBACK_RETRIES 次。
     返回 (items, attempts, instance, errors)：instance 是给出结果（或最后成功响应）的实例。
     所有实例都请求失败时抛 SearchError。
+    max_wait 是重试的总时间预算（秒）：超出后不再重试，但每个实例至少请求一次。
+    最坏耗时约 max_wait + 实例数 × timeout。
     """
+    deadline = now() + max_wait if max_wait else None
     urls = parse_urls(urls) or list(DEFAULT_URLS)
     attempts = 0
     errors = []
@@ -190,7 +200,8 @@ def search_many(keyword, urls=DEFAULT_URLS, token=None, retries=3, timeout=30,
             else:
                 log("正在搜索「{}」（{}）…".format(keyword, url))
         try:
-            items, used = search(keyword, url, token, n, timeout, sleep=sleep, log=log)
+            items, used = search(keyword, url, token, n, timeout, sleep=sleep, log=log,
+                                 deadline=deadline, now=now)
         except SearchError as e:
             errors.append("{}: {}".format(url, e))
             continue
@@ -229,8 +240,12 @@ def main(argv=None):
                         help="自部署实例开启认证时的 JWT（默认不填）")
     parser.add_argument("--limit", type=int, default=5, help="最多输出几条（默认 5）")
     parser.add_argument("--retries", type=int, default=3,
-                        help="结果为空时用同一关键词重试几次（默认 3，约 30 秒，0 表示不重试）")
-    parser.add_argument("--timeout", type=float, default=30, help="单次请求超时秒数（默认 30）")
+                        help="结果为空时用同一关键词重试几次（默认 3，0 表示不重试）")
+    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT,
+                        help="单次请求超时秒数（默认 {}）".format(DEFAULT_TIMEOUT))
+    parser.add_argument("--max-wait", type=float, default=DEFAULT_MAX_WAIT,
+                        help="重试的总时间预算秒数，超出就不再重试（默认 {}，0 表示不限）".format(
+                            DEFAULT_MAX_WAIT))
     parser.add_argument("--json", action="store_true", help="以 JSON 输出结果")
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
     args = parser.parse_args(argv)
@@ -248,7 +263,8 @@ def main(argv=None):
 
     try:
         items, attempts, instance, errors = search_many(
-            kw, args.url, args.token or None, args.retries, args.timeout, log=log)
+            kw, args.url, args.token or None, args.retries, args.timeout, log=log,
+            max_wait=args.max_wait)
     except SearchError as e:
         if args.json:
             print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))

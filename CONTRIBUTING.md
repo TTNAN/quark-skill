@@ -45,6 +45,7 @@ HOME=$(mktemp -d) npx -y skills add . -g -y -a claude-code
 - **改了 SKILL.md**：注意 `description` 里不要出现未加引号的 `: `，测试会检查 YAML 能否解析。
 - **改了行为**：同步更新 `README.md`、`README.en.md` 和 `CHANGELOG.md`。
 - **发版本**：同时改 SKILL.md 的 `metadata.version` 和 `pansou_search.py` 的 `__version__`（测试会检查两者一致），然后打 `vX.Y.Z` tag 并发 Release。
+- **官方 Skill 升级后**：在真实智能体里重跑一遍全链路，用新输出刷新 `tests/fixtures/workbuddy/`（先脱敏：昵称、头像、token、`share_fid_token`、用户目录名），再把 `tests/test_real_fixtures.py` 里的 `VERIFIED_OFFICIAL_VERSION` 和 README 的“已实测验证”一行改成新版本号。当前验证版本：**1.0.25**。
 - 提交信息用中文或英文都行，说清楚改了什么。
 
 ## 报 Bug

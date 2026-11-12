@@ -133,7 +133,7 @@ def test_parse_urls():
 def test_search_many_falls_back_on_empty_and_error():
     calls = []
 
-    def fake_search(kw, url, token, retries, timeout, sleep=None, log=None):
+    def fake_search(kw, url, token, retries, timeout, sleep=None, log=None, **kw2):
         calls.append((url, retries))
         if url == "https://a":
             return [], retries + 1
@@ -165,3 +165,45 @@ def test_search_many_empty_everywhere(monkeypatch):
     monkeypatch.setattr(ps, "search", lambda *a, **k: ([], 1))
     items, attempts, inst, errors = ps.search_many("x", "https://a,https://b")
     assert items == [] and inst == "https://b" and attempts == 2
+
+
+def test_search_stops_retrying_at_deadline():
+    clock = [0.0]
+    sleeps = []
+
+    def fake_fetch(url, token=None, timeout=None):
+        clock[0] += timeout  # 模拟每次请求都跑满超时
+        return {"code": 0, "data": {"merged_by_type": {}}}
+
+    def sleep(s):
+        sleeps.append(s)
+        clock[0] += s
+    items, attempts = ps.search("x", retries=3, timeout=15, fetch=fake_fetch, sleep=sleep,
+                                deadline=40, now=lambda: clock[0])
+    # 0s 请求→15s；+5 等待+15 请求=35s；再 +10+15 会超 40，停
+    assert attempts == 2 and sleeps == [5] and items == []
+
+
+def test_search_many_worst_case_is_bounded():
+    clock = [0.0]
+
+    def fake_fetch(url, token=None, timeout=None):
+        clock[0] += timeout
+        return {"code": 0, "data": {"merged_by_type": {}}}
+    orig = ps.fetch_json
+    ps.fetch_json = fake_fetch
+    try:
+        # search 的 fetch 默认参数在定义时就绑定了，这里直接包一层
+        real = ps.search
+
+        def wrapped(*a, **k):
+            k["fetch"] = fake_fetch
+            k["sleep"] = lambda s: clock.__setitem__(0, clock[0] + s)
+            return real(*a, **k)
+        ps.search = wrapped
+        ps.search_many("x", "https://a,https://b", now=lambda: clock[0])
+    finally:
+        ps.search = real
+        ps.fetch_json = orig
+    # 默认：超时 15 秒、预算 60 秒、两个实例 → 最坏不超过 60 + 2×15
+    assert clock[0] <= ps.DEFAULT_MAX_WAIT + 2 * ps.DEFAULT_TIMEOUT

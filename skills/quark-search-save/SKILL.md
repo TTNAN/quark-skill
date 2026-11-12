@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，转存前用官方 share-detail 剔除失效链接，再调夸克官方 Skill 的 saveas 全自动转存（可只存选中文件、可追更新增内容），全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、只存第几章、这个分享有更新吗、把更新存下来、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.3.3"
+  version: "1.3.4"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -23,7 +23,8 @@ metadata:
    python3 <本 Skill 目录>/scripts/find_quark_cli.py --json
    ```
 
-   - `ok: true`：记下 `cli`（即 `<quark-cli>`）和 `skill_dir`（即 `<quark-skill-dir>`），本次对话复用。
+   - `ok: true`：记下 `cli`（即 `<quark-cli>`）和 `skill_dir`（即 `<quark-skill-dir>`），本次对话复用。脚本已经跑过 `node <cli> --help` 验证能用；有多份时取的是版本最高的。
+   - `ok: false` 但有 `broken`：装过，但跑不起来（常见是没装 node 或文件不完整）。告诉用户原因，问他要不要重装；同意后对那个目录运行 `python3 <本 Skill 目录>/scripts/install_quark_skill.py --json --dir <broken[0].skill_dir> --force`，官方安装脚本会补装 Node.js 并自检。
    - `ok: false`：告诉用户“转存要用夸克官方的网盘 Skill，你还没装”，**问他要不要现在从夸克官方地址帮他装**。他同意后运行：
 
      ```bash
@@ -52,7 +53,7 @@ metadata:
 
 ### 第 1 步：搜索
 
-**先告诉用户要等一会儿。** 冷门词的搜索加预检，最慢可能要一两分钟。开始前说一句“正在搜，可能要一两分钟”；两个脚本都会把进度打到 stderr（正在搜索哪个实例、第几次重试、第几条链接验完），等得久时把最新一条进度转告用户，别让他以为卡住了。
+**先告诉用户要等一会儿。** 通常半分钟以内；冷门词要重试、换实例时，搜索最坏约两分钟，预检最坏约一分半，合计最坏三四分钟。开始前说一句“正在搜，一般半分钟左右，冷门的可能要三四分钟”；两个脚本都会把进度打到 stderr（正在搜索哪个实例、第几次重试、第几条链接验完），等得久时把最新一条进度转告用户，别让他以为卡住了。
 
 ```bash
 python3 <本 Skill 目录>/scripts/pansou_search.py --kw "<关键词>" --limit 10 --json > <临时目录>/qs-search.json

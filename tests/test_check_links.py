@@ -56,6 +56,9 @@ def test_classify():
     assert cl.classify(STOKEN)[0] == "unknown"
     assert cl.classify(PASSTHRU)[0] == "invalid"
     assert cl.classify(EMPTY)[0] == "invalid"
+    # share_info 里压根没有 file_num 也算空分享
+    bare = {"code": 0, "type": "result", "data": {"token_info": {}, "share_info": {}, "files": []}}
+    assert cl.classify(bare)[0] == "invalid"
 
 
 def test_progress_logged():

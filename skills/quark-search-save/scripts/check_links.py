@@ -66,7 +66,7 @@ def classify(result):
         files = data.get("files") or []
         share_info = data.get("share_info") or {}
         token_info = data.get("token_info") or {}
-        if not files and share_info.get("file_num") == 0:
+        if not files and not share_info.get("file_num") and not share_info.get("file_only_num"):
             return "invalid", {"msg": "分享里没有文件（可能已被删除或屏蔽）", "errno": None}
         folders = sum(1 for f in files if str(f.get("file_type")) == "0")
         size = sum(int(f.get("size") or 0) for f in files if str(f.get("file_type")) != "0")
@@ -103,7 +103,7 @@ def errno_of(result):
     return None
 
 
-def run_cli(cli, link, session_input, session_id, skill_updated=False, timeout=30, runner=subprocess.run):
+def run_cli(cli, link, session_input, session_id, skill_updated=False, timeout=20, runner=subprocess.run):
     cmd = ["node", cli, "share-detail", "--url", link["url"], "--size", "20",
            "--session-input", session_input, "--session-id", session_id]
     if link.get("needs_passcode") and link.get("password"):
@@ -175,7 +175,7 @@ def main(argv=None):
     ap.add_argument("--input", default="-", help="pansou_search.py --json 的输出文件（默认读标准输入）")
     ap.add_argument("--keep", type=int, default=5, help="最多保留几条可用链接（默认 5）")
     ap.add_argument("--workers", type=int, default=3, help="并发数（默认 3）")
-    ap.add_argument("--timeout", type=float, default=30, help="每条链接的超时秒数（默认 30）")
+    ap.add_argument("--timeout", type=float, default=20, help="每条链接的超时秒数（默认 20；10 条 3 并发最坏约 80 秒）")
     ap.add_argument("--quiet", action="store_true", help="不往 stderr 打进度")
     ap.add_argument("--skill-updated", action="store_true", help="官方 install.sh 返回 updated:true 时加上")
     args = ap.parse_args(argv)

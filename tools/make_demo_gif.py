@@ -186,16 +186,13 @@ cur = [0.0]
 def add(blocks, ms, snap=False):
     _, bottom = render(blocks, 0)
     target = max(0.0, bottom - (BOTTOM - TOP) - 10)
-    cur[0] = target if snap else cur[0] + (target - cur[0]) * 0.45
-    if abs(cur[0] - target) < 2:
-        cur[0] = target
+    # 直接跳到目标位置：平滑滚动会让每一帧整屏变化，GIF 体积翻好几倍
+    cur[0] = target
     im, _ = render(blocks, cur[0])
     frames.append(im); durs.append(ms)
 
 
 def settle(blocks, ms):
-    for _ in range(5):
-        add(blocks, 40)
     add(blocks, ms)
 
 
@@ -257,10 +254,14 @@ B += [("status", "ok", "已回查：2 个文件都在网盘里"),
 settle(B, 4000)
 
 keys = [frames[i] for i in (0, len(frames) // 3, len(frames) // 2, len(frames) * 3 // 4, len(frames) - 1)]
-sheet = Image.new("RGB", (W, H * len(keys)))
+sheet = Image.new("RGB", (W, H * (len(keys) + 1)))
 for i, k in enumerate(keys):
     sheet.paste(k, (0, H * i))
-pal = sheet.quantize(colors=255, method=Image.MEDIANCUT)
+# 品牌色色块：保证 64 色调色板里一定有这些颜色（勾、进度条、按钮、保存位置框）
+sw = ImageDraw.Draw(sheet)
+for i, c in enumerate([OK, WARN, P1, USERBG, LINK, (236, 253, 245), (167, 243, 208), (6, 95, 70), (237, 233, 254)]):
+    sw.rectangle([i * (W // 9), H * len(keys), (i + 1) * (W // 9), H * (len(keys) + 1)], fill=c)
+pal = sheet.quantize(colors=64, method=Image.MEDIANCUT)
 frames = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
 frames[0].save(os.path.join(ROOT, "assets", "demo.gif"), save_all=True, append_images=frames[1:],
                duration=durs, loop=0, optimize=True)

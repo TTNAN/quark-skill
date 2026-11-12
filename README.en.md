@@ -106,7 +106,7 @@ later:      get-share-update-files → saveas-update   save only what's new
 | --- | --- | --- |
 | `PANSOU_URL` | PanSou instance(s); comma-separated, tried in order | `https://s.panhunt.com,https://so.252035.xyz` |
 | `PANSOU_TOKEN` | JWT for instances with auth enabled | empty |
-| `QUARK_SKILL_DIR` | Install dir of the official Quark skill (only if auto-detect fails) | auto |
+| `QUARK_SKILL_DIR` | Install dir of the official Quark skill (only if auto-detect fails; when set, it is the only place checked) | auto: every copy found is run with `--help`, the highest working version wins |
 
 ```bash
 python3 skills/quark-search-save/scripts/pansou_search.py --kw "linear algebra" --limit 10 --json > /tmp/qs.json
@@ -146,6 +146,8 @@ For self-hosting PanSou, see [fish2018/pansou](https://github.com/fish2018/panso
 ## Supported agents
 
 Any agent that can run the official Quark skill. The official page currently lists Qwen Office Assistant, WorkBuddy, Codex and OpenClaw; Claude Code, Cursor and other agents that load Agent Skills and can run `node` usually work too.
+
+**Verified end to end** with official skill **1.0.25** in WorkBuddy (Windows) on 2026-11-12: install, search, pre-check, list files, save selected files, verify, check for updates. Raw official outputs live in `tests/fixtures/workbuddy/`.
 
 ## Development
 

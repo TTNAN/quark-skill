@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.4 — 2026-11-12
+
+### Changed
+- **`find_quark_cli.py` 会验证 CLI 能跑**：每个找到的 `quark-drive.cjs` 都跑一次 `node quark-drive.cjs --help`，跑不起来的（没装 node、文件被截断）记进 `broken`、不算找到。能跑的有多份时取官方 `SKILL.md` 版本号最高的，项目里残留的旧版不再盖过全局新装的；查找位置补上 `.workbuddy/skills`、`.codebuddy/skills`。`QUARK_SKILL_DIR` 设了就只认它。`--no-verify` 可跳过验证。SKILL.md 写明 `broken` 时如何引导用户重装。
+- **最坏耗时有上限，文档口径对齐代码**：新增 `--max-wait`（默认 60 秒）重试总预算，超出就不再重试，每个实例至少请求一次；搜索单次超时 30→25 秒（公共实例实测单次就要 6–18 秒，再低会把正常请求判超时），搜索最坏约两分钟；预检单条超时 30→20 秒，最坏约一分半。SKILL.md 改为“通常半分钟以内，最坏三四分钟”，README 不再写“约 30 秒”。
+- 预检：`code: 0`、`files` 为空且 `share_info` 里没有 `file_num` / `file_only_num` 的分享也按失效处理。
+
+### Docs
+- README 中英文写明“已实测验证：官方 Skill 1.0.25，WorkBuddy”；CONTRIBUTING 写明官方升级后要重跑真机、刷新固件。测试里的 `VERIFIED_OFFICIAL_VERSION` 和这两处文档不一致时 CI 会红。
+- 演示动图从 2.1 MB 压到约 400 KB（滚动改为直接跳转、64 色调色板并固定品牌色），内容不变。
+
 ## 1.3.3 — 2026-11-12
 
 ### Added
