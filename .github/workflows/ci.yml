@@ -7,14 +7,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # 用官方 Python 镜像而不是 setup-python：新 runner 镜像会陆续丢掉老版本 Python，
+    # 容器里的 3.9 不受 runner 升级影响。
+    container: python:${{ matrix.python-version }}-slim
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.9", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
       - run: pip install pytest pyyaml
       - run: python -m pytest -q
       - name: Scripts start
