@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6D5BFF" alt="MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.8%2B-3F7BFF" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/python-3.9%2B-3F7BFF" alt="Python 3.9+">
   <img src="https://img.shields.io/badge/依赖-仅标准库-1FC8F2" alt="no deps">
   <img src="https://img.shields.io/badge/Agent%20Skill-quark--search--save-334155" alt="skill">
   <a href="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml"><img src="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -59,7 +59,7 @@
 **你需要准备**
 
 - 一个支持 Agent Skill 的智能体（Claude Code、Codex、Cursor 等）
-- Python 3.8+（脚本只用标准库，不用 `pip install`）
+- Python 3.9+（脚本只用标准库，不用 `pip install`；macOS 自带的 python3 就够）
 - 一个夸克网盘账号
 
 Node.js 不用提前装：官方安装脚本会检查，缺了自动装 16+。

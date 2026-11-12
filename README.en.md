@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6D5BFF" alt="MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.8%2B-3F7BFF" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/python-3.9%2B-3F7BFF" alt="Python 3.9+">
   <img src="https://img.shields.io/badge/deps-stdlib%20only-1FC8F2" alt="no deps">
   <a href="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml"><img src="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
@@ -44,7 +44,7 @@ No cookie scraping, no reverse engineering, no servers to deploy, and this repo 
 npx skills add TTNAN/quark-skill -g -y
 ```
 
-You need an Agent-Skill-capable agent (Claude Code, Codex, Cursor, …), Python 3.8+ (stdlib only) and a Quark Drive account. Node.js is installed by the official setup script if missing.
+You need an Agent-Skill-capable agent (Claude Code, Codex, Cursor, …), Python 3.9+ (stdlib only; the python3 that ships with macOS works) and a Quark Drive account. Node.js is installed by the official setup script if missing.
 
 **First use** adds two one-time steps:
 

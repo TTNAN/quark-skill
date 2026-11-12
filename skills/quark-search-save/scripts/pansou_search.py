@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PanSou 网盘搜索客户端（只用 Python 标准库，Python 3.8+）。
+"""PanSou 网盘搜索客户端（只用 Python 标准库，Python 3.9+）。
 
 查询 PanSou 聚合搜索 API，返回去重、按日期倒序排好的夸克网盘（quark）分享链接。
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- 最低 Python 版本定为 **3.9**（macOS 自带的 python3 就是 3.9）。CI 改回 `ubuntu-latest`，测 3.9 和 3.13，不再钉死会被 GitHub 退役的 ubuntu-22.04。
+
 ## 1.3.1 — 2026-11-12
 
 ### Fixed
