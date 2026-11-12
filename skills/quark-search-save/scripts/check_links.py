@@ -4,7 +4,8 @@
 读 pansou_search.py --json 的输出，对每条链接调用：
   node <quark-cli> share-detail --url <链接> [--passcode <提取码>] --size 20 \
        --session-input "<用户原话>" --session-id "<会话 ID>"
-然后把失效的剔除，有效的补上分享标题、文件数和内容预览。
+然后把明确失效的剔除（只认已知失效码），有效的补上分享标题、文件数和内容预览。
+拿不准的（网络抖动、限流、未知错误）一律标 unknown 留给用户。进度打到 stderr。
 
 用法：
   python3 pansou_search.py --kw "线性代数" --limit 10 --json > /tmp/qs.json
@@ -15,16 +16,15 @@
 """
 import argparse
 import json
+import re
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# share-detail 失败时，msg 里出现这些词说明分享本身不可用（失效/取消/不存在/封禁/提取码错）
-DEAD_MARKERS = (
-    "share not exist", "not exist", "不存在", "失效", "已取消", "取消分享", "cancel",
-    "过期", "expire", "封禁", "违规", "banned", "提取码", "passcode", "password",
-    "41004", "41006", "41007", "41011", "41012", "41013",
-)
+# 只认已知的「分享本身不可用」错误码；其余一律算 unknown，交给用户决定，不直接判死。
+# 41004 文件列表为空/已过期，41006 分享不存在，41007 share not exist（官方文档示例）。
+DEAD_ERRNOS = {41004, 41006, 41007}
+_ERRNO_RE = re.compile(r"errno\s*[=:]\s*(\d+)")
 PREVIEW = 3
 
 
@@ -66,6 +66,8 @@ def classify(result):
         files = data.get("files") or []
         share_info = data.get("share_info") or {}
         token_info = data.get("token_info") or {}
+        if not files and share_info.get("file_num") == 0:
+            return "invalid", {"msg": "分享里没有文件（可能已被删除或屏蔽）", "errno": None}
         folders = sum(1 for f in files if str(f.get("file_type")) == "0")
         size = sum(int(f.get("size") or 0) for f in files if str(f.get("file_type")) != "0")
         return "valid", {
@@ -77,13 +79,24 @@ def classify(result):
         }
     if result.get("action") == "runtime":
         return "runtime", {"msg": msg}
-    low = msg.lower()
-    if any(m in low for m in DEAD_MARKERS):
-        return "invalid", {"msg": msg}
-    return "unknown", {"msg": msg}
+    errno = errno_of(result)
+    if errno in DEAD_ERRNOS:
+        return "invalid", {"msg": msg, "errno": errno}
+    return "unknown", {"msg": msg, "errno": errno}
 
 
-def run_cli(cli, link, session_input, session_id, skill_updated=False, timeout=60, runner=subprocess.run):
+def errno_of(result):
+    """从官方结果里取服务端 errno：msg 里的 errno=NNNNN，或直接透传的 code。"""
+    m = _ERRNO_RE.search(str(result.get("msg") or ""))
+    if m:
+        return int(m.group(1))
+    code = result.get("code")
+    if isinstance(code, int) and code > 0:
+        return code
+    return None
+
+
+def run_cli(cli, link, session_input, session_id, skill_updated=False, timeout=30, runner=subprocess.run):
     cmd = ["node", cli, "share-detail", "--url", link["url"], "--size", "20",
            "--session-input", session_input, "--session-id", session_id]
     if link.get("needs_passcode") and link.get("password"):
@@ -99,15 +112,27 @@ def run_cli(cli, link, session_input, session_id, skill_updated=False, timeout=6
     return last_result(proc.stdout)
 
 
+STATUS_TEXT = {"valid": "可用", "invalid": "已失效", "unknown": "未验证", "runtime": "CLI 不可用"}
+
+
 def check(links, cli, session_input, session_id, keep=5, workers=3, skill_updated=False,
-          call=run_cli):
+          call=run_cli, log=None):
     links = list(links)
     results = [None] * len(links)
+    total = len(links)
+    if log and total:
+        log("正在逐条验证 {} 条链接（{} 个并发）…".format(total, max(1, workers)))
+    done = [0]
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
         futs = {pool.submit(call, cli, l, session_input, session_id, skill_updated): i
                 for i, l in enumerate(links)}
-        for fut, i in futs.items():
+        for fut in as_completed(futs):
+            i = futs[fut]
             results[i] = fut.result()
+            done[0] += 1
+            if log:
+                log("[{}/{}] {}：{}".format(done[0], total, links[i].get("title", "")[:30],
+                                          STATUS_TEXT[classify(results[i])[0]]))
 
     notices = []
     checked = []
@@ -139,6 +164,8 @@ def main(argv=None):
     ap.add_argument("--input", default="-", help="pansou_search.py --json 的输出文件（默认读标准输入）")
     ap.add_argument("--keep", type=int, default=5, help="最多保留几条可用链接（默认 5）")
     ap.add_argument("--workers", type=int, default=3, help="并发数（默认 3）")
+    ap.add_argument("--timeout", type=float, default=30, help="每条链接的超时秒数（默认 30）")
+    ap.add_argument("--quiet", action="store_true", help="不往 stderr 打进度")
     ap.add_argument("--skill-updated", action="store_true", help="官方 install.sh 返回 updated:true 时加上")
     args = ap.parse_args(argv)
 
@@ -151,8 +178,15 @@ def main(argv=None):
     if not search.get("ok"):
         print(json.dumps({"ok": False, "error": search.get("error") or "搜索失败"}, ensure_ascii=False))
         return 1
+    def call(cli, link, si, sid, upd):
+        return run_cli(cli, link, si, sid, upd, timeout=args.timeout)
+
+    def log(msg):
+        print(msg, file=sys.stderr, flush=True)
+
     res = check(search.get("quark_links") or [], args.cli, args.session_input, args.session_id,
-                keep=args.keep, workers=args.workers, skill_updated=args.skill_updated)
+                keep=args.keep, workers=args.workers, skill_updated=args.skill_updated,
+                call=call, log=None if args.quiet else log)
     res["keyword"] = search.get("keyword")
     print(json.dumps(res, ensure_ascii=False, indent=2))
     return 0

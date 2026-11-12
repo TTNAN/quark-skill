@@ -106,3 +106,55 @@ def test_rejects_zip_slip(tmp_path):
     with pytest.raises(iq.InstallError):
         iq.install(str(tmp_path / "q"), setup=False, fetch=fake_fetch(make_zip(bad)))
     assert not (tmp_path / "evil.txt").exists()
+
+
+class _P:
+    def __init__(self, code=0, out="", err=""):
+        self.returncode, self.stdout, self.stderr = code, out, err
+
+
+def _skill(tmp_path, with_cli=True):
+    d = tmp_path / "quarkclouddrive"
+    (d / "scripts").mkdir(parents=True)
+    (d / "scripts" / "install.sh").write_text("echo hi")
+    if with_cli:
+        (d / "scripts" / "quark-drive.cjs").write_text("//")
+    return str(d)
+
+
+def _which(name):
+    return "/usr/bin/" + name
+
+
+def test_setup_ok_without_install_result_line(tmp_path):
+    d = _skill(tmp_path)
+    res = iq.run_official_setup(d, run=lambda cmd, t: _P(0, "some new format"), which=_which)
+    assert res["success"] and res["install_result"] is None
+
+
+def test_setup_fails_on_nonzero_exit(tmp_path):
+    d = _skill(tmp_path)
+    with pytest.raises(iq.InstallError):
+        iq.run_official_setup(d, run=lambda cmd, t: _P(1, "", "boom"), which=_which)
+
+
+def test_setup_fails_when_official_says_false(tmp_path):
+    d = _skill(tmp_path)
+    line = '{"install_result": true, "success": false}'
+    with pytest.raises(iq.InstallError):
+        iq.run_official_setup(d, run=lambda cmd, t: _P(0, line), which=_which)
+
+
+def test_setup_fails_without_cli(tmp_path):
+    d = _skill(tmp_path, with_cli=False)
+    with pytest.raises(iq.InstallError):
+        iq.run_official_setup(d, run=lambda cmd, t: _P(0), which=_which)
+
+
+def test_setup_fails_when_help_breaks(tmp_path):
+    d = _skill(tmp_path)
+
+    def run(cmd, t):
+        return _P(0) if cmd[0] == "bash" else _P(2, "", "SyntaxError")
+    with pytest.raises(iq.InstallError):
+        iq.run_official_setup(d, run=run, which=_which)

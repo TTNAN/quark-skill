@@ -30,7 +30,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 DEFAULT_URL = "https://s.panhunt.com"
 # 默认实例列表：第一个没结果或出错时依次尝试后面的
@@ -184,8 +184,11 @@ def search_many(keyword, urls=DEFAULT_URLS, token=None, retries=3, timeout=30,
     answered = None
     for i, url in enumerate(urls):
         n = retries if i == 0 else min(retries, FALLBACK_RETRIES)
-        if i and log:
-            log("{} 没有结果，换备用实例 {} 再试…".format(urls[i - 1], url))
+        if log:
+            if i:
+                log("{} 没有结果，换备用实例 {} 再试…".format(urls[i - 1], url))
+            else:
+                log("正在搜索「{}」（{}）…".format(keyword, url))
         try:
             items, used = search(keyword, url, token, n, timeout, sleep=sleep, log=log)
         except SearchError as e:

@@ -119,29 +119,55 @@ def read_version(skill_dir):
     return ""
 
 
-def run_official_setup(skill_dir, timeout=600):
-    """运行官方 install.sh，返回它最后输出的 install_result（若有）。"""
+def _run(cmd, timeout):
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+def run_official_setup(skill_dir, timeout=600, run=_run, which=shutil.which):
+    """运行官方 install.sh，并自己验证结果。
+
+    成功标准不依赖官方脚本的输出格式：install.sh 退出码为 0、
+    scripts/quark-drive.cjs 存在、`node quark-drive.cjs --help` 能正常运行。
+    官方脚本若输出了 install_result 且明确 success:false，也按失败处理。
+    """
     script = os.path.join(skill_dir, "scripts", "install.sh")
+    cli = os.path.join(skill_dir, CLI_REL)
     if not os.path.isfile(script):
         raise InstallError("官方包里没有 scripts/install.sh")
-    if not shutil.which("bash"):
+    if not which("bash"):
         raise InstallError("没有找到 bash，请手动运行官方 scripts/install.sh")
     try:
-        proc = subprocess.run(["bash", script], capture_output=True, text=True, timeout=timeout)
+        proc = run(["bash", script], timeout)
     except subprocess.TimeoutExpired:
         raise InstallError("官方 install.sh 超时")
-    result = None
-    for line in proc.stdout.splitlines():
+
+    def tail(p):
+        return " | ".join(((p.stderr or "") + "\n" + (p.stdout or "")).strip().splitlines()[-5:])
+
+    result = None  # 官方脚本的 install_result 只作参考
+    for line in (proc.stdout or "").splitlines():
         line = line.strip()
-        if line.startswith("{") and '"install_result"' in line:
+        if line.startswith("{") and "install_result" in line:
             try:
                 result = json.loads(line)
             except ValueError:
                 pass
-    if proc.returncode != 0 or not (result and result.get("success")):
-        tail = (proc.stderr or proc.stdout).strip().splitlines()[-5:]
-        raise InstallError("官方 install.sh 执行失败: " + " | ".join(tail))
-    return result
+    if proc.returncode != 0:
+        raise InstallError("官方 install.sh 执行失败（退出码 %s）: %s" % (proc.returncode, tail(proc)))
+    if isinstance(result, dict) and result.get("success") is False:
+        raise InstallError("官方 install.sh 报告失败: %s" % tail(proc))
+    if not os.path.isfile(cli):
+        raise InstallError("安装后没有找到官方 CLI：%s" % cli)
+    node = which("node")
+    if not node:
+        raise InstallError("安装后仍找不到 node，请检查 Node.js 16+ 是否装好")
+    try:
+        check = run([node, cli, "--help"], 60)
+    except subprocess.TimeoutExpired:
+        raise InstallError("官方 CLI --help 超时")
+    if check.returncode != 0:
+        raise InstallError("官方 CLI 无法运行: %s" % tail(check))
+    return {"success": True, "verified": "exit0+cli+help", "install_result": result}
 
 
 def install(target, setup=True, force=False, fetch=_get, timeout=60, runner=run_official_setup):

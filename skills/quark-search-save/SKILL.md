@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，转存前用官方 share-detail 剔除失效链接，再调夸克官方 Skill 的 saveas 全自动转存（可只存选中文件、可追更新增内容），全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、只存第几章、这个分享有更新吗、把更新存下来、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.3.0"
+  version: "1.3.1"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -52,6 +52,8 @@ metadata:
 
 ### 第 1 步：搜索
 
+**先告诉用户要等一会儿。** 冷门词的搜索加预检，最慢可能要一两分钟。开始前说一句“正在搜，可能要一两分钟”；两个脚本都会把进度打到 stderr（正在搜索哪个实例、第几次重试、第几条链接验完），等得久时把最新一条进度转告用户，别让他以为卡住了。
+
 ```bash
 python3 <本 Skill 目录>/scripts/pansou_search.py --kw "<关键词>" --limit 10 --json > <临时目录>/qs-search.json
 ```
@@ -76,7 +78,7 @@ python3 <本 Skill 目录>/scripts/pansou_search.py --kw "<关键词>" --limit 1
 python3 <本 Skill 目录>/scripts/check_links.py --cli <quark-cli> --session-input "<用户原话>" --session-id "<会话 ID>" --input <临时目录>/qs-search.json --keep 5
 ```
 
-脚本对每条候选调官方 `share-detail`（客态模式，不需要登录），剔除已失效、已取消、不存在、提取码错误的分享，保留最多 5 条。需要 `--skill-updated` 时也加上。
+脚本对每条候选调官方 `share-detail`（客态模式，不需要登录），只剔除**明确失效**的分享（已知失效码 41004 / 41006 / 41007，或分享里一个文件都没有），保留最多 5 条。网络抖动、限流、提取码问题等拿不准的情况一律标 `unknown`，留给用户决定。需要 `--skill-updated` 时也加上。
 
 - `shown`：要给用户看的候选，顺序不变。每条的 `check.status` 为 `valid`（附 `share_title`、`file_num`、`listed_size`、`preview` 前几个文件名）或 `unknown`（没验出来，`check.msg` 是原因，照样可选）。
 - `invalid`：被剔除的条目，只需在表格下方用一句话说明“另有 N 条已失效，已略过”。

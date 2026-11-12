@@ -13,6 +13,12 @@ OK = {"code": 0, "msg": "成功", "type": "result", "action": "share-detail",
                          {"fid": "c", "filename": "第3章.pdf", "size": 1, "file_type": "1"}]}}
 DEAD = {"code": -803, "msg": "获取分享详情失败: errno=41007, message=share not exist", "type": "result"}
 ODD = {"code": -1, "msg": "网络异常", "type": "result"}
+TRICKY = {"code": -803, "msg": "获取分享详情失败: errno=50001, message=request cancelled, rate limit, password service expired",
+          "type": "result"}
+STOKEN = {"code": -803, "msg": "获取分享详情失败: errno=41008, message=stoken invalid", "type": "result"}
+PASSTHRU = {"code": 41006, "msg": "分享不存在", "type": "result"}
+EMPTY = {"code": 0, "msg": "成功", "type": "result",
+         "data": {"token_info": {"title": "x"}, "share_info": {"file_num": 0}, "file_count": 0, "files": []}}
 RUNTIME = {"code": -104, "msg": "无法识别当前 Agent 环境，禁止继续使用", "action": "runtime", "type": "result"}
 
 
@@ -45,6 +51,18 @@ def test_classify():
     assert cl.classify(ODD)[0] == "unknown"
     assert cl.classify(RUNTIME)[0] == "runtime"
     assert cl.classify(None)[0] == "unknown"
+    # 报错里碰巧带 cancel / expire / password 等词，但不是已知失效码：不能判死
+    assert cl.classify(TRICKY)[0] == "unknown"
+    assert cl.classify(STOKEN)[0] == "unknown"
+    assert cl.classify(PASSTHRU)[0] == "invalid"
+    assert cl.classify(EMPTY)[0] == "invalid"
+
+
+def test_progress_logged():
+    ls = links(2)
+    lines = []
+    cl.check(ls, "cli", "q", "s", call=fake({l["url"]: OK for l in ls}), log=lines.append)
+    assert lines[0].startswith("正在逐条验证 2 条") and lines[-1].startswith("[2/2]")
 
 
 def test_check_drops_dead_keeps_order_and_limit():

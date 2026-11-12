@@ -145,7 +145,7 @@ For self-hosting PanSou, see [fish2018/pansou](https://github.com/fish2018/panso
 
 ## Supported agents
 
-Any agent that can run the official Quark skill. The official page currently lists Qwen Office Assistant, Codex and OpenClaw; Claude Code, Cursor and other agents that load Agent Skills and can run `node` usually work too.
+Any agent that can run the official Quark skill. The official page currently lists Qwen Office Assistant, WorkBuddy, Codex and OpenClaw; Claude Code, Cursor and other agents that load Agent Skills and can run `node` usually work too.
 
 ## Development
 
