@@ -27,7 +27,7 @@
 | You say | It does |
 | --- | --- |
 | (first use) | Notices the official Quark skill is missing, asks you, then installs it from Quark's own servers and walks you through login |
-| "Find linear algebra slides and save them to Quark" | Searches PanSou (falls back to a second instance when the first has nothing), keeps only Quark links, dedupes, newest first |
+| "Find linear algebra slides and save them to Quark" | Searches PanSou (tries the next instance in `PANSOU_URL` when one has nothing), keeps only Quark links, dedupes, newest first |
 | (automatic) | Checks every candidate with the official `share-detail`, **drops dead links**, shows the top 5 with file count and a content preview |
 | "Number 1, only the PDFs" | Finds the PDFs inside the share with the official `share-search` and saves only the files you pick |
 | "Number 2" | Saves the whole share with the official `saveas` |
@@ -91,7 +91,7 @@ cp -r quark-skill/skills/quark-search-save ~/.claude/skills/
 
 ```
 ⓪ prepare   find_quark_cli.py → install_quark_skill.py (with your consent)
-① search    pansou_search.py       Quark links only, deduped, newest first; cold-cache retry; fallback instance
+① search    pansou_search.py       Quark links only, deduped, newest first; cold-cache retry; multi-instance fallback
 ② check     check_links.py         official share-detail; dead links dropped, file count + preview added
 ③ pick      top 5 as a table       nothing is saved without your explicit choice
 ④ files     share-search / share-detail   (optional) pick only some files inside the share
@@ -104,7 +104,7 @@ later:      get-share-update-files → saveas-update   save only what's new
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `PANSOU_URL` | PanSou instance(s); comma-separated, tried in order | `https://s.panhunt.com,https://so.252035.xyz` |
+| `PANSOU_URL` | PanSou instance(s); comma-separated, the next one is tried when one errors or returns nothing | `https://so.252035.xyz` (`s.panhunt.com` requires an auth token since Nov 2026) |
 | `PANSOU_TOKEN` | JWT for instances with auth enabled | empty |
 | `QUARK_SKILL_DIR` | Install dir of the official Quark skill (only if auto-detect fails; when set, it is the only place checked) | auto: every copy found is run with `--help`, the highest working version wins |
 
@@ -122,7 +122,7 @@ For self-hosting PanSou, see [fish2018/pansou](https://github.com/fish2018/panso
 ## Behaviour
 
 - Searches only with the words you gave; never invents links or rewrites your query.
-- Retries the **same** keyword when PanSou's cache is cold, then tries the fallback instance.
+- Retries the **same** keyword when PanSou's cache is cold, then tries the next instance if you configured more than one.
 - Asks before installing anything; installs only from Quark's official servers.
 - Never saves without your explicit pick; uses Quark's default folder unless you name one.
 - Stops and shows the raw error message when a transfer fails.
@@ -138,7 +138,7 @@ For self-hosting PanSou, see [fish2018/pansou](https://github.com/fish2018/panso
 ## Limitations
 
 - Quark Drive only; other drives are filtered out.
-- Results depend on PanSou's coverage; some niche terms return nothing on both public instances.
+- Results depend on PanSou's coverage; some niche terms return nothing on the public instance.
 - One share per transfer (you can save just some of its files).
 - The pre-check tells you a share opens *now*; it can still be withdrawn before you save it.
 - Update tracking only works for shares you saved with `saveas`.

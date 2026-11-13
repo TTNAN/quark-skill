@@ -28,7 +28,7 @@
 | 你说 | 它做 |
 | --- | --- |
 | （第一次用时） | 发现没装夸克官方 Skill，问你一句，同意后从夸克官方地址自动装好并引导登录 |
-| 「帮我找一下线性代数的课件，存到夸克」 | 用 PanSou 聚合搜索（主实例没结果自动换备用），只留夸克链接，去重排序 |
+| 「帮我找一下线性代数的课件，存到夸克」 | 用 PanSou 聚合搜索，只留夸克链接，去重排序 |
 | （自动） | 用官方 `share-detail` 逐条验链接，**失效的直接剔掉**，列出能存的前 5 条，附文件数和内容预览 |
 | 「要第 1 个，只要 PDF」 | 用官方 `share-search` 在分享里找出 PDF，你挑好后只转存这几个文件 |
 | 「要第 2 个」 | 调官方 `saveas`，整个分享一键转存 |
@@ -174,7 +174,7 @@ node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
 ⓪ 准备   find_quark_cli.py                   找官方 Skill；没有就问你，同意后 install_quark_skill.py 从官方地址装
    │
    ▼
-① 搜索   pansou_search.py --kw "关键词"      只留夸克链接，去重排序；冷启动自动重试，没结果换备用实例
+① 搜索   pansou_search.py --kw "关键词"      只留夸克链接，去重排序；冷启动自动重试，可配多个实例依次尝试
    │
    ▼
 ② 预检   check_links.py → share-detail       失效的剔掉，补上文件数和内容预览
@@ -196,7 +196,7 @@ node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
 
 每一步具体做了什么：
 
-1. **搜索**：从你的话里取出资源名本身（去掉书名号、「帮我找」、版本号、年份），调 PanSou 的 `cloud_types=quark&res=merge` 接口。结果只留 `pan.quark.cn` 链接，按链接去重（重复时保留较新的、补齐提取码），按日期从新到旧排序。空结果时用**同一个关键词**按 5、10、15 秒退避重试；主实例还是没结果或出错，就换备用实例再试一次。
+1. **搜索**：从你的话里取出资源名本身（去掉书名号、「帮我找」、版本号、年份），调 PanSou 的 `cloud_types=quark&res=merge` 接口。结果只留 `pan.quark.cn` 链接，按链接去重（重复时保留较新的、补齐提取码），按日期从新到旧排序。空结果时用**同一个关键词**按 5、10、15 秒退避重试；`PANSOU_URL` 配了多个实例时，前一个还是没结果或出错，就换下一个再试一次。
 2. **预检**：对前 10 条候选逐个调官方 `share-detail`（客态模式，不需要登录），只剔掉**明确失效**的（已知失效码 41004 / 41006 / 41007，或分享里一个文件都没有），网络抖动、限流这类拿不准的标成「未验证」留给你，留下最多 5 条，并带上分享标题、文件数和前几个文件名。官方 CLI 当前不可用时跳过这一步，流程照旧。
 3. **挑选**：表格里有文件数和内容预览，你不用点开链接也知道里面是什么。你提过的版本、年份等条件只用来帮你标出最匹配的一条，最终还是你说了算。
 4. **选文件**（只在你提出时）：「只要第 3 章」「只要 PDF」时用 `share-search` 在分享里搜；想先看看时用 `share-detail` 浏览目录。挑好的文件记下 `fid`。
@@ -207,11 +207,11 @@ node scripts/quark-drive.cjs --help    # 能打印帮助就说明装好了
 
 ## 配置
 
-搜索默认依次用两个 PanSou 公共实例：`https://s.panhunt.com`，没结果或出错时换 `https://so.252035.xyz`（PanSou 作者的演示站），都不需要 key。自部署实例时用环境变量覆盖：
+搜索默认用 PanSou 公共实例 `https://so.252035.xyz`（PanSou 作者的演示站），不需要 key。`s.panhunt.com` 从 2026-11 起要求认证令牌，已移出默认列表。自部署实例或有令牌时用环境变量覆盖：
 
 | 环境变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `PANSOU_URL` | PanSou 实例地址，逗号分隔可写多个，按顺序尝试 | `https://s.panhunt.com,https://so.252035.xyz` |
+| `PANSOU_URL` | PanSou 实例地址，逗号分隔可写多个，前一个出错或没结果时按顺序换下一个 | `https://so.252035.xyz` |
 | `PANSOU_TOKEN` | 实例开启认证时的 JWT | 空 |
 | `QUARK_SKILL_DIR` | 夸克官方 Skill 的安装目录（找不到时才需要） | 自动查找 |
 
@@ -245,7 +245,7 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
   "keyword": "线性代数",
   "quark_total": 95,
   "attempts": 1,
-  "instance": "https://s.panhunt.com",
+  "instance": "https://so.252035.xyz",
   "instance_errors": [],
   "quark_links": [
     {
@@ -265,7 +265,7 @@ python3 skills/quark-search-save/scripts/find_quark_cli.py      # 看看官方 C
 | `quark_total` | 去重后的夸克链接总数（`quark_links` 只是其中前 `--limit` 条） |
 | `attempts` | 所有实例加起来实际请求了几次（冷启动重试时大于 1） |
 | `instance` | 结果来自哪个 PanSou 实例 |
-| `instance_errors` | 请求失败的实例和原因（换到备用实例时才会有） |
+| `instance_errors` | 请求失败的实例和原因（配了多个实例、前面的失败时才会有） |
 | `password` | 搜索源给出的提取码，没有则为空 |
 | `needs_passcode` | 有提取码且链接里没带 `?pwd=` 时为 `true`，转存要加 `--passcode` |
 | `source` | 结果来自 PanSou 的哪个频道或插件 |
@@ -325,7 +325,7 @@ python3 skills/quark-search-save/scripts/install_quark_skill.py --no-setup      
 
 ### 自部署 PanSou
 
-公共实例 `s.panhunt.com` 是别人维护的，收录范围和稳定性都不受本项目控制。需要更稳定的搜索时，可以按 [fish2018/pansou](https://github.com/fish2018/pansou) 的说明用 Docker 自己起一个实例，再设置：
+公共实例 `so.252035.xyz` 是别人维护的，收录范围和稳定性都不受本项目控制。需要更稳定的搜索时，可以按 [fish2018/pansou](https://github.com/fish2018/pansou) 的说明用 Docker 自己起一个实例，再设置：
 
 ```bash
 export PANSOU_URL="http://你的实例地址:端口"
@@ -346,7 +346,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 
 ## 数据与隐私
 
-- **发给 PanSou 的**：只有搜索关键词（主实例没结果时，备用实例也会收到同一个关键词）。
+- **发给 PanSou 的**：只有搜索关键词（配了多个实例时，后面的实例也可能收到同一个关键词）。
 - **发给夸克的**：由官方 Skill 的 CLI 发出，内容是分享链接、提取码（预检、选文件、转存、查更新时），以及官方 CLI 要求的会话参数（你的原始提问、会话 ID）。这部分行为由夸克官方 Skill 决定。
 - **安装官方 Skill 时**（只在第一次、你同意后）：访问夸克官方的 `open-api-drive.quark.cn` 和 `pdds.quark.cn` 下载安装包；官方安装脚本缺 Node.js 时会从 NodeSource 安装。
 - **本仓库不读、不存**任何 cookie、token 或账号信息，也不把数据发到第三方服务器。
@@ -354,7 +354,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 ## 已知限制
 
 - 只支持夸克网盘链接；百度、阿里等网盘的结果会被过滤掉。
-- 搜得到什么取决于 PanSou 实例的收录。两个公共实例对部分冷门词（例如一些课程名）都可能返回空，这时换个说法或自部署实例更有效。
+- 搜得到什么取决于 PanSou 实例的收录。公共实例对部分冷门词（例如一些课程名）可能返回空，这时换个说法或自部署实例更有效。
 - 一次只转存一条分享（可以只存其中几个文件），不做多条分享的批量转存。
 - 预检只能看出「这条分享现在能不能打开」，转存那一刻仍可能因为对方取消分享而失败。
 - 追更依赖官方的转存记录，只对你用 `saveas` 存过的分享有效。
@@ -378,7 +378,7 @@ export PANSOU_TOKEN="..."   # 实例开启认证时才需要
 <details>
 <summary>明明有资源却说搜不到？</summary>
 
-PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。搜索脚本已经会用同一关键词自动重试 3 次（退避 5、10、15 秒），还没有就换备用实例再试。整个搜索有 60 秒的重试预算，加上每次请求最多 25 秒，最坏大约两分钟就会给出结果。仍然没有时，多半是关键词太长：只说书名、课程名本身，别带版本号、年份、出版社。
+PanSou 对新关键词是边搜边聚合的，第一次请求常常返回空。搜索脚本已经会用同一关键词自动重试 3 次（退避 5、10、15 秒），配了多个实例时再换下一个。整个搜索有 60 秒的重试预算，加上每次请求最多 25 秒，最坏大约两分钟就会给出结果。仍然没有时，多半是关键词太长：只说书名、课程名本身，别带版本号、年份、出版社。
 
 </details>
 
@@ -438,7 +438,7 @@ quark-skill/
 ├── skills/quark-search-save/
 │   ├── SKILL.md                 智能体读的说明书（触发词、工作流、失败处理）
 │   └── scripts/
-│       ├── pansou_search.py     PanSou 搜索、过滤、去重、排序、冷启动重试、备用实例
+│       ├── pansou_search.py     PanSou 搜索、过滤、去重、排序、冷启动重试、多实例依次尝试
 │       ├── find_quark_cli.py    定位夸克官方 Skill 的 CLI
 │       ├── check_links.py       调官方 share-detail 预检候选，剔除失效链接
 │       └── install_quark_skill.py  没装时从夸克官方地址安装官方 Skill

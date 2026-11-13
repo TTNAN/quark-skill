@@ -4,7 +4,7 @@ description: >-
   对话里找网盘资源并一句话转存到夸克网盘。先调 PanSou 聚合搜索找夸克分享链接，转存前用官方 share-detail 剔除失效链接，再调夸克官方 Skill 的 saveas 全自动转存（可只存选中文件、可追更新增内容），全程不抓 cookie、不手动点、不部署新应用。触发词：找资源、搜课件、找一下 XX、帮我存到夸克、帮我把 XX 存到夸克网盘、把 XX 保存到夸克、只存第几章、这个分享有更新吗、把更新存下来、quark search / save。Find cloud-drive resources in chat and save them to Quark Drive: search PanSou for Quark share links, then transfer them with the official Quark Drive skill's saveas. Use when the user asks to find a resource and save it to Quark Drive.
 license: MIT
 metadata:
-  version: "1.3.5"
+  version: "1.3.6"
   repository: https://github.com/TTNAN/quark-skill
 ---
 
@@ -36,7 +36,7 @@ metadata:
      - `ok: false`：把 `error` 原文告诉用户，附上 `official_page` 让他按官方页面手动安装，然后停下。
      - 用户想装到别的位置（例如 Codex 的 `~/.codex/skills`）时，加 `--dir <目录>/quarkclouddrive`。官方要求装在智能体的**全局** skills 目录，不要装进项目目录。
      - 用户不同意安装：停下，告诉他转存这一步需要官方 Skill；也可以设置环境变量 `QUARK_SKILL_DIR` 指向已有的安装目录。
-2. **搜索用 PanSou。** 默认依次用两个公共实例（`https://s.panhunt.com`，没结果或出错再换 `https://so.252035.xyz`），不用 key；用户自部署时才用 `PANSOU_URL`（可用逗号写多个）/ `PANSOU_TOKEN`。
+2. **搜索用 PanSou。** 默认用公共实例 `https://so.252035.xyz`，不用 key；报“需要认证令牌”时告诉用户该实例要 token，用户自部署时才用 `PANSOU_URL`（可用逗号写多个）/ `PANSOU_TOKEN`。
 
 ## 调官方 CLI 的公共规则（每条命令都适用）
 
@@ -69,7 +69,7 @@ python3 <本 Skill 目录>/scripts/pansou_search.py --kw "<关键词>" --limit 1
 **结果怎么读：**
 
 - 脚本已经只保留夸克链接、按 URL 去重、按日期从新到旧排好序。
-- 脚本在结果为空时会**自动用同一关键词退避重试，并自动换备用实例**。你不需要、也不允许再自己换词重搜。
+- 脚本在结果为空时会**自动用同一关键词退避重试；配了多个实例时还会依次换实例**。你不需要、也不允许再自己换词重搜。
 - `ok: false`：把 `error` 原文告诉用户，停下。
 - `quark_links` 为空：直接告诉用户搜不到。**不许换词重搜、不许编链接。** 可以建议他换个说法，或自部署 PanSou 实例。
 

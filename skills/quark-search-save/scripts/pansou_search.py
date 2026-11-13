@@ -5,13 +5,13 @@
 
 用法：
     python3 pansou_search.py --kw "关键词" [--limit 5] [--json]
-                             [--url https://s.panhunt.com] [--token <TOKEN>]
+                             [--url https://so.252035.xyz] [--token <TOKEN>]
                              [--retries 3] [--timeout 25] [--max-wait 60]
 
 说明：
-- 默认依次使用两个 PanSou 公共实例 https://s.panhunt.com 和 https://so.252035.xyz ，
-  不带 key 就能用：前一个出错或没结果时，自动换下一个。
-- 自部署实例用 --url（或环境变量 PANSOU_URL），可以用逗号写多个，按顺序尝试；实例开了认证
+- 默认使用 PanSou 公共实例 https://so.252035.xyz （PanSou 作者的演示站），不带 key 就能用。
+  （s.panhunt.com 自 2026-11 起要求认证令牌，已不在默认列表里；有令牌可用 --url + --token。）
+- 自部署实例用 --url（或环境变量 PANSOU_URL），可以用逗号写多个，前一个出错或没结果时按顺序换下一个；实例开了认证
   （AUTH_ENABLED=true）再用 --token（或 PANSOU_TOKEN）传 JWT。
 - PanSou 对新关键词是异步聚合的，第一次请求常常返回 0 条。
   脚本会用【同一个关键词】自动退避重试（默认最多再试 3 次，共约 30 秒），不会改词。
@@ -30,13 +30,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__version__ = "1.3.5"
+__version__ = "1.3.6"
 
-DEFAULT_URL = "https://s.panhunt.com"
-# 默认实例列表：第一个没结果或出错时依次尝试后面的
-DEFAULT_URLS = (DEFAULT_URL, "https://so.252035.xyz")
+DEFAULT_URL = "https://so.252035.xyz"
+# 默认实例列表：第一个没结果或出错时依次尝试后面的。
+# s.panhunt.com 2026-11-13 实测不带令牌一律返回 AUTH_TOKEN_MISSING，已移出默认列表。
+DEFAULT_URLS = (DEFAULT_URL,)
 FALLBACK_RETRIES = 1  # 备用实例只重试 1 次，避免总耗时过长
-DEFAULT_TIMEOUT = 25  # 单次请求超时（秒）。s.panhunt.com 实测单次 6–18 秒才返回，别再往下调
+DEFAULT_TIMEOUT = 25  # 单次请求超时（秒）。公共实例实测单次 6–18 秒才返回，别再往下调
 DEFAULT_MAX_WAIT = 60  # 重试总预算（秒）：最坏约 60 + 实例数 × 25 ≈ 110 秒
 RETRY_DELAYS = (5, 10, 15)  # 第 n 次重试前等待的秒数（PanSou 冷启动实测需 10–30 秒）
 _DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
@@ -44,6 +45,16 @@ _DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
 class SearchError(RuntimeError):
     """搜索请求失败（网络、HTTP、响应格式）。"""
+
+
+class AuthError(SearchError):
+    """实例要求认证令牌：重试没用，直接换实例或报错。"""
+
+
+def _auth_error(code, detail):
+    return AuthError(
+        "PanSou 搜索失败：这个实例需要认证令牌（{}：{}），"
+        "请用 --token 或环境变量 PANSOU_TOKEN 传入，或换一个实例".format(code, detail))
 
 
 def fetch_json(url, token=None, timeout=30):
@@ -58,7 +69,13 @@ def fetch_json(url, token=None, timeout=30):
             raw = resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "ignore")[:300]
-        raise SearchError("PanSou 搜索失败：HTTP {} {}".format(e.code, body)) from e
+        if e.code in (401, 403) and "AUTH_" in body:
+            try:
+                err = json.loads(body)
+            except ValueError:
+                err = {}
+            raise _auth_error(err.get("code") or e.code, err.get("error") or body) from e
+        raise SearchError("PanSou 搜索失败：HTTP {} {}".format(e.code, " ".join(body.split())[:200])) from e
     except (urllib.error.URLError, OSError) as e:  # 含超时、DNS、连接重置
         raise SearchError("PanSou 搜索失败：网络错误 {}".format(e)) from e
     try:
@@ -79,8 +96,12 @@ def parse_payload(payload):
     """从 PanSou 响应里取出夸克链接原始列表；业务错误抛 SearchError。"""
     if not isinstance(payload, dict):
         raise SearchError("PanSou 搜索失败：响应格式不对")
-    if payload.get("code") != 0:
-        raise SearchError("PanSou 搜索失败：{}".format(payload.get("message") or payload))
+    code = payload.get("code")
+    if code != 0:
+        detail = payload.get("message") or payload.get("error") or payload
+        if isinstance(code, str) and code.startswith("AUTH_"):
+            raise _auth_error(code, detail)
+        raise SearchError("PanSou 搜索失败：{}".format(detail))
     data = payload.get("data") or {}
     merged = data.get("merged_by_type") or {}
     return merged.get("quark") or []
@@ -137,14 +158,16 @@ def clean_links(raw_links):
 
 def search(keyword, base_url=DEFAULT_URL, token=None, retries=3, timeout=DEFAULT_TIMEOUT,
            sleep=time.sleep, fetch=fetch_json, log=None, deadline=None, now=time.monotonic):
-    """搜索夸克链接。结果为空时用同一关键词退避重试 retries 次。
+    """搜索夸克链接。结果为空或临时出错（超时、HTTP 5xx/400 等）时用同一关键词退避重试 retries 次。
 
     deadline（time.monotonic 时刻）到了就不再重试，但至少请求一次。
-    返回 (items, attempts)。
+    认证错误（AuthError）不重试。重试用完仍出错时抛最后一次的 SearchError；
+    只要有一次请求成功（哪怕为空），就返回 (items, attempts)。
     """
     url = build_url(base_url, keyword)
     attempts = 0
     items = []
+    last_error = None
     for attempt in range(retries + 1):
         if attempt:
             delay = RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)]
@@ -153,13 +176,26 @@ def search(keyword, base_url=DEFAULT_URL, token=None, retries=3, timeout=DEFAULT
                     log("已经等了很久，不再重试 {}。".format(base_url))
                 break
             if log:
-                log("暂无结果，PanSou 可能还在聚合，{} 秒后用同一关键词重试（第 {}/{} 次）…".format(
-                    delay, attempt, retries))
+                if last_error is not None:
+                    log("请求出错（{}），{} 秒后用同一关键词重试（第 {}/{} 次）…".format(
+                        last_error, delay, attempt, retries))
+                else:
+                    log("暂无结果，PanSou 可能还在聚合，{} 秒后用同一关键词重试（第 {}/{} 次）…".format(
+                        delay, attempt, retries))
             sleep(delay)
         attempts += 1
-        items = clean_links(parse_payload(fetch(url, token=token, timeout=timeout)))
+        try:
+            items = clean_links(parse_payload(fetch(url, token=token, timeout=timeout)))
+        except AuthError:
+            raise
+        except SearchError as e:
+            last_error = e
+            continue
+        last_error = None
         if items:
             break
+    if last_error is not None:
+        raise last_error
     return items, attempts
 
 

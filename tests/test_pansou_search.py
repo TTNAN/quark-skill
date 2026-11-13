@@ -83,6 +83,47 @@ def test_search_no_retry_when_disabled():
     assert items == [] and attempts == 1 and sleeps == []
 
 
+def test_auth_error_is_explained():
+    with pytest.raises(ps.SearchError, match="认证令牌"):
+        ps.parse_payload({"code": "AUTH_TOKEN_MISSING", "error": "未授权：缺少认证令牌"})
+
+
+def test_search_retries_transient_errors():
+    sleeps, n = [], []
+
+    def flaky(url, token=None, timeout=30):
+        n.append(1)
+        if len(n) == 1:
+            raise ps.SearchError("网络错误 timed out")
+        return payload(LINKS)
+
+    items, attempts = ps.search("x", retries=2, fetch=flaky, sleep=sleeps.append)
+    assert attempts == 2 and len(items) == 3 and sleeps == [5]
+
+
+def test_search_raises_after_errors_exhaust_retries():
+    def down(url, token=None, timeout=30):
+        raise ps.SearchError("HTTP 502")
+    with pytest.raises(ps.SearchError, match="502"):
+        ps.search("x", retries=1, fetch=down, sleep=lambda s: None)
+
+
+def test_search_does_not_retry_auth_error():
+    calls = []
+
+    def auth(url, token=None, timeout=30):
+        calls.append(1)
+        raise ps._auth_error("AUTH_TOKEN_MISSING", "未授权")
+    with pytest.raises(ps.AuthError):
+        ps.search("x", retries=3, fetch=auth, sleep=lambda s: None)
+    assert len(calls) == 1
+
+
+def test_default_instances_skip_auth_only_panhunt():
+    assert "https://s.panhunt.com" not in ps.DEFAULT_URLS
+    assert ps.DEFAULT_URLS[0] == "https://so.252035.xyz"
+
+
 def test_build_url_uses_merge():
     url = ps.build_url("https://s.panhunt.com/", "线性 代数")
     assert url.startswith("https://s.panhunt.com/api/search?")
