@@ -460,6 +460,10 @@ python tools/make_demo_gif.py       # 重新生成演示动图（需要 Pillow �
 
 本项目不提供、不存储、不托管任何资源，只调用 PanSou 公开搜索 API 与夸克官方转存接口。请只转存你有权保存的内容（公开课程、开源资料、自己的分享等），因使用本项目产生的版权问题由使用者自行负责。
 
+## 友情链接
+
+本项目认可并支持 [LINUX DO 社区](https://linux.do)。
+
 ## 协议
 
 [MIT](LICENSE) © TTNAN
