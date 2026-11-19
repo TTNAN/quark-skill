@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/依赖-仅标准库-1FC8F2" alt="no deps">
   <img src="https://img.shields.io/badge/Agent%20Skill-quark--search--save-334155" alt="skill">
   <a href="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml"><img src="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.skillsdirectory.com/skills/ttnan-quark-search-save"><img src="https://www.skillsdirectory.com/api/skills/ttnan-quark-search-save/badge" alt="Skills Directory 安全评级"></a>
 </p>
 
 <p align="center">简体中文 · <a href="README.en.md">English</a></p>

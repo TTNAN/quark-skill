@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/python-3.9%2B-3F7BFF" alt="Python 3.9+">
   <img src="https://img.shields.io/badge/deps-stdlib%20only-1FC8F2" alt="no deps">
   <a href="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml"><img src="https://github.com/TTNAN/quark-skill/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.skillsdirectory.com/skills/ttnan-quark-search-save"><img src="https://www.skillsdirectory.com/api/skills/ttnan-quark-search-save/badge" alt="Security grade on Skills Directory"></a>
 </p>
 
 <p align="center"><a href="README.md">简体中文</a> · English</p>
