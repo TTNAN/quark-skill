@@ -162,6 +162,14 @@ See [CONTRIBUTING](CONTRIBUTING.md) (Chinese) for project rules and release step
 
 This project hosts no content. It only calls PanSou's public search API and Quark's official skill. Only save content you have the right to keep.
 
+## Buy me a coffee
+
+If this project saved you some time, feel free to buy me a coffee. ☕
+
+| WeChat Reward |
+| ---------- |
+| <img src="assets/wechat-pay.png" width="220" alt="WeChat Reward QR"> |
+
 ## License
 
 [MIT](LICENSE) © TTNAN

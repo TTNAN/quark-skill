@@ -465,6 +465,14 @@ python tools/make_demo_gif.py       # 重新生成演示动图（需要 Pillow �
 
 本项目认可并支持 [LINUX DO 社区](https://linux.do)。
 
+## 请我喝杯咖啡
+
+如果这个项目帮你省了点时间，欢迎请我喝杯咖啡。☕
+
+| 微信赞赏码 |
+| -------- |
+| <img src="assets/wechat-pay.png" width="220" alt="微信赞赏码"> |
+
 ## 协议
 
 [MIT](LICENSE) © TTNAN
